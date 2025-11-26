@@ -1,0 +1,26 @@
+# --- Core Web Framework ---
+Flask>=2.2.0
+
+# --- Authentication ---
+Flask-JWT-Extended>=4.4.0
+
+# --- Database ---
+mysql-connector-python>=8.0.0
+PyMySQL>=1.0.0
+
+# --- Configuration ---
+python-dotenv>=0.20.0
+
+# --- Date/Time Utilities ---
+python-dateutil>=2.8.0
+
+# --- UUID Generation for Token Blacklisting ---
+uuid6>=2024.1.25
+
+# --- Production Server ---
+gunicorn>=20.1.0
+
+# --- Validation ---
+marshmallow>=3.19.0
+
+uuid6>=2024.1.25
