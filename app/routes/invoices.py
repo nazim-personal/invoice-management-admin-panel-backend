@@ -52,7 +52,7 @@ def list_invoices():
         return error_response('server_error', 'Failed to fetch invoices.', str(e), 500)
 
 
-@invoices_blueprint.route('/invoices/<int:invoice_id>', methods=['GET'])
+@invoices_blueprint.route('/invoices/<string:invoice_id>', methods=['GET'])
 @jwt_required()
 def get_invoice(invoice_id):
     try:
