@@ -1,26 +1,19 @@
-# --- Core Web Framework ---
-Flask>=2.2.0
-
-# --- Authentication ---
-Flask-JWT-Extended>=4.4.0
-
-# --- Database ---
-mysql-connector-python>=8.0.0
-PyMySQL>=1.0.0
-
-# --- Configuration ---
-python-dotenv>=0.20.0
-
-# --- Date/Time Utilities ---
-python-dateutil>=2.8.0
-
-# --- UUID Generation for Token Blacklisting ---
-uuid6>=2024.1.25
-
-# --- Production Server ---
-gunicorn>=20.1.0
-
-# --- Validation ---
-marshmallow>=3.19.0
-
-uuid6>=2024.1.25
+blinker==1.9.0
+click==8.3.1
+dotenv==0.9.9
+Flask==3.1.2
+Flask-JWT-Extended==4.7.1
+gunicorn==23.0.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+marshmallow==4.1.1
+mysql-connector-python==9.5.0
+packaging==25.0
+PyJWT==2.10.1
+PyMySQL==1.1.2
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
+six==1.17.0
+uuid6==2025.0.1
+Werkzeug==3.1.4
