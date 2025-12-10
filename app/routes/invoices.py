@@ -165,10 +165,10 @@ def create_invoice():
         return error_response('server_error', 'Error creating invoice.', str(e), 500)
 
 
-@invoices_blueprint.route('/invoices/<int:invoice_id>', methods=['PUT'])
+@invoices_blueprint.route('/invoices/<string:invoice_id>', methods=['PUT'])
 @jwt_required()
 @require_admin
-def update_invoice(invoice_id: int):
+def update_invoice(invoice_id: str):
     data = request.get_json()
     if not data:
         return error_response('validation_error', ERROR_MESSAGES["validation"]["request_body_empty"], 400)
