@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS invoice_items;
 DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS user_permissions;
 DROP TABLE IF EXISTS users;
 
 
@@ -43,6 +44,31 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_name (name),
   INDEX idx_users_role (role),
   INDEX idx_users_deleted_at (deleted_at)
+);
+
+-- ------------------------------------------------------------------
+-- Table: user_permissions
+-- Purpose: Stores granted permissions for each user (admin has all automatically)
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_permissions (
+  id CHAR(36) PRIMARY KEY,               -- UUID for unique permission record identification
+  user_id CHAR(36) NOT NULL,             -- Foreign key linking to the user
+  permission VARCHAR(100) NOT NULL,      -- Permission key (e.g., 'customers.create')
+  granted_by CHAR(36),                   -- User ID who granted this permission
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp of permission grant
+  deleted_at TIMESTAMP NULL DEFAULT NULL,   -- Timestamp of soft deletion
+
+  -- Foreign key constraints
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL,
+
+  -- Ensure unique user-permission combinations
+  UNIQUE KEY unique_user_permission (user_id, permission, deleted_at),
+
+  -- Indexes for faster queries
+  INDEX idx_user_permissions_user_id (user_id),
+  INDEX idx_user_permissions_permission (permission),
+  INDEX idx_user_permissions_deleted_at (deleted_at)
 );
 
 -- ------------------------------------------------------------------

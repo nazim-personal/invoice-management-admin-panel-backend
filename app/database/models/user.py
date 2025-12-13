@@ -63,7 +63,7 @@ class User(BaseModel):
 
         query = f'INSERT INTO {cls._table_name} (username, email, password_hash, name, role, phone) VALUES (%s, %s, %s, %s, %s, %s)'
         user_id = DBManager.execute_write_query(query, (username, email, hashed_password, name, role, phone))
-        
+
         # Return the ID directly. The route will be responsible for fetching.
         return user_id
 
@@ -84,3 +84,20 @@ class User(BaseModel):
         query = f'{base_query} {clause} (username = %s OR email = %s)'
         result = DBManager.execute_query(query, (login_identifier, login_identifier), fetch='one')
         return cls.from_row(result)
+
+    def get_permissions(self):
+        """
+        Get all permissions for this user.
+        Admin role automatically has all permissions.
+        """
+        if self.role == 'admin':
+            from app.utils.permissions import PERMISSIONS
+            return list(PERMISSIONS.keys())
+
+        from app.database.models.permission_model import UserPermission
+        return UserPermission.get_user_permissions(str(self.id))
+
+    def has_permission(self, permission: str) -> bool:
+        """Check if user has a specific permission"""
+        return permission in self.get_permissions()
+

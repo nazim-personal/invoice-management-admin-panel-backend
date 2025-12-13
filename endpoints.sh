@@ -27,10 +27,19 @@ curl -X GET "$BASE_URL/health/"
 # Auth Endpoints
 # -----------------
 echo "\n### Sign In as Admin (to get Admin Token) ###"
+echo "# Supports: email, username, or identifier field"
 curl -X POST -H "Content-Type: application/json" -d '{
   "email": "admin@example.com",
-  "password": "adminpassword"
+  "password": "Sknazim1818@"
 }' "$BASE_URL/auth/sign-in/"
+
+
+echo "\n### Refresh Access Token (Using Refresh Token) ###"
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_REFRESH_TOKEN_HERE" "$BASE_URL/auth/refresh/"
+
+
+echo "\n### Get Current User Info (Using Access Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE" "$BASE_URL/auth/me/"
 
 
 echo "\n### Register a New User (Requires Admin Token) ###"
@@ -42,15 +51,33 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_
 }' "$BASE_URL/auth/register/"
 
 
-echo "\n### Sign In as Standard User (to get User Token) ###"
-curl -X POST -H "Content-Type: application/json" -d '{
-  "email": "test@example.com",
-  "password": "password123"
-}' "$BASE_URL/auth/sign-in/"
-
-
 echo "\n### Sign Out (Requires Any Valid Token) ###"
 curl -X POST -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/auth/sign-out/"
+
+
+# -----------------
+# Permission Endpoints
+# -----------------
+echo "\n### List All Permissions (Requires Any Valid Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/permissions/"
+
+
+echo "\n### Get User Permissions (Requires Admin Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/users/USER_ID_HERE/permissions/"
+
+
+echo "\n### Grant Single Permission (Requires Admin Token) ###"
+curl -X POST -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/users/USER_ID_HERE/permissions/customers.create/"
+
+
+echo "\n### Update User Permissions - Replace All (Requires Admin Token) ###"
+curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
+  "permissions": ["customers.view", "customers.create", "products.view", "invoices.view"]
+}' "$BASE_URL/users/USER_ID_HERE/permissions/"
+
+
+echo "\n### Revoke Single Permission (Requires Admin Token) ###"
+curl -X DELETE -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/users/USER_ID_HERE/permissions/customers.create/"
 
 
 # -----------------
@@ -207,8 +234,12 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_
 
 echo "\n### Bulk Delete Invoices (Requires Admin Token) ###"
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
-    "ids": [1, 2]
+  "ids": ["INVOICE_ID_1", "INVOICE_ID_2"]
 }' "$BASE_URL/invoices/bulk-delete/"
+
+
+echo "\n### Generate Invoice PDF (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_TOKEN_HERE" "$BASE_URL/invoices/INVOICE_ID_HERE/pdf/" --output invoice.pdf
 
 
 echo "\n### Bulk Restore Invoices (Requires Admin Token) ###"

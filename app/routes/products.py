@@ -7,7 +7,7 @@ from app.database.models.product import Product
 from app.schemas.product_schema import ProductSchema
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
-from app.utils.auth import require_admin
+from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
 
 products_blueprint = Blueprint('products', __name__)
@@ -24,7 +24,7 @@ def validate_json(schema: ProductSchema, partial: bool = False) -> Dict[str, Any
     raw_data = request.get_json()
     if not raw_data or not isinstance(raw_data, dict):
         raise ValidationError(ERROR_MESSAGES["validation"]["request_body_empty"])
-    
+
     validated_data: Dict[str, Any] = schema.load(raw_data, partial=partial)
     return validated_data
 
@@ -48,7 +48,7 @@ def search_products():
 
 @products_blueprint.route('/products', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('products.create')
 def create_product():
     try:
         validated_data = validate_json(product_schema)
@@ -66,6 +66,7 @@ def create_product():
 
 @products_blueprint.route('/products', methods=['GET'])
 @jwt_required()
+@require_permission('products.view')
 def get_products():
     page, per_page = get_pagination()
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
@@ -80,6 +81,7 @@ def get_products():
 
 @products_blueprint.route('/products/<string:product_id>', methods=['GET'])
 @jwt_required()
+@require_permission('products.view')
 def get_product(product_id):
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
     try:
@@ -93,7 +95,7 @@ def get_product(product_id):
 
 @products_blueprint.route('/products/<string:product_id>', methods=['PUT'])
 @jwt_required()
-@require_admin
+@require_permission('products.update')
 def update_product(product_id):
     try:
         validated_data = validate_json(product_update_schema, partial=True)
@@ -112,7 +114,7 @@ def bulk_action_handler(ids: List[str], action_func, success_msg: str, not_found
     """
     if not ids:  # Only check for empty list
         return error_response('validation_error', "Invalid request. 'ids' must be a non-empty list.", 400)
-    
+
     try:
         affected_count = action_func(ids)
         if affected_count > 0:
@@ -129,8 +131,8 @@ def bulk_action_handler(ids: List[str], action_func, success_msg: str, not_found
 
 @products_blueprint.route('/products/bulk-restore', methods=['POST'])
 @jwt_required()
-@require_admin
-def restore_products():
+@require_permission('products.restore')
+def bulk_restore_products():
     data = request.get_json() or {}
     ids = data.get('ids', [])
     return bulk_action_handler(ids, Product.bulk_restore, "restored successfully", "No matching product found for the provided IDs.")
@@ -138,7 +140,7 @@ def restore_products():
 
 @products_blueprint.route('/products/bulk-delete', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('products.delete')
 def bulk_delete_products():
     data = request.get_json() or {}
     ids = data.get('ids', [])

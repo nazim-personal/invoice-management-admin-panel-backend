@@ -1,11 +1,13 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 from flask import Flask, jsonify
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from app.database.db_manager import DBManager
 from app.database.models.user import User
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.response import error_response
+from app.utils.db_init import init_db
 
 # Import the token blocklist
 from app.database.token_blocklist import BLOCKLIST
@@ -18,14 +20,34 @@ from .routes.invoices import invoices_blueprint
 from .routes.products import products_blueprint
 from .routes.payments import payments_blueprint
 from .routes.dashboard import dashboard_bp
+from .routes.permissions import permissions_blueprint
 
 def create_app():
     app = Flask(__name__)
 
+    # Initialize database on startup
+    # We do this inside app context in case we switch to using current_app.config later
+    with app.app_context():
+        init_db()
+
+    # --- CORS Configuration ---
+    # Allow all origins in development, configure specific origins in production
+    cors_origins = os.environ.get('CORS_ORIGINS', '*')
+    CORS(app,
+         resources={r"/api/*": {"origins": cors_origins}},
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
     # --- Configuration ---
     app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', '773a46049339ef55babc522b64fcc25e3524fb737aa0c2da8a7ee105202a7486')
     app.config["SECRET_KEY"] = os.environ.get('SECRET_KEY', '13c8e9205aa641f5e83b3ad1738047a839ee5df3416c60d502bd4bfa0a657796')
-    
+
+    # JWT Token Configuration
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=int(os.environ.get('JWT_ACCESS_TOKEN_HOURS', '1')))
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=int(os.environ.get('JWT_REFRESH_TOKEN_DAYS', '30')))
+    app.config["JWT_TOKEN_LOCATION"] = ["headers"]  # Support Authorization header
+
     jwt = JWTManager(app)
 
     # --- JWT Blocklist Configuration ---
@@ -73,6 +95,7 @@ def create_app():
     app.register_blueprint(products_blueprint, url_prefix='/api')
     app.register_blueprint(payments_blueprint, url_prefix='/api')
     app.register_blueprint(dashboard_bp, url_prefix='/api')
+    app.register_blueprint(permissions_blueprint, url_prefix='/api')
 
     # A simple health check route
     @app.route("/api/health")
@@ -94,5 +117,5 @@ def create_app():
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "database": db_status
         }), http_status
-    
+
     return app

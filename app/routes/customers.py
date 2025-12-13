@@ -12,7 +12,7 @@ from app.schemas.customer_schema import (
 )
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
-from app.utils.auth import require_admin
+from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
 
 customers_blueprint = Blueprint('customers', __name__)
@@ -40,7 +40,7 @@ def get_existing_customer_by_email(email: str):
 # ---------------- Create Customer ----------------
 @customers_blueprint.route('/customers', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('customers.create')
 def create_customer():
     data = request.get_json() or {}
     if not data:
@@ -68,15 +68,16 @@ def create_customer():
     except ValueError as err:
         return error_response('validation_error', "Invalid data.", details=err.args[0], status=400)
     except Exception as e:
-        return error_response(error_code='server_error', 
-                              message=ERROR_MESSAGES["server_error"]["create_customer"], 
-                              details=str(e), 
+        return error_response(error_code='server_error',
+                              message=ERROR_MESSAGES["server_error"]["create_customer"],
+                              details=str(e),
                               status=500)
 
 
 # ---------------- Get Customers ----------------
 @customers_blueprint.route('/customers', methods=['GET'])
 @jwt_required()
+@require_permission('customers.view')
 def get_customers():
     page, per_page = get_pagination()
     q = request.args.get('q')
@@ -103,6 +104,7 @@ def get_customers():
 # ---------------- Get Single Customer ----------------
 @customers_blueprint.route('/customers/<string:customer_id>', methods=['GET'])
 @jwt_required()
+@require_permission('customers.view')
 def get_customer(customer_id: str):
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
     try:
@@ -117,7 +119,7 @@ def get_customer(customer_id: str):
 # ---------------- Update Customer ----------------
 @customers_blueprint.route('/customers/<string:customer_id>', methods=['PUT'])
 @jwt_required()
-@require_admin
+@require_permission('customers.update')
 def update_customer(customer_id: str):
     data = request.get_json() or {}
     if not data:
@@ -155,7 +157,7 @@ def update_customer(customer_id: str):
 # ---------------- Restore Customer ----------------
 @customers_blueprint.route('/customers/bulk-restore', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('customers.restore')
 def restore_customer():
     data = request.get_json() or {}
     ids_to_restore: List[str] = data.get('ids', [])
@@ -175,7 +177,7 @@ def restore_customer():
 # ---------------- Bulk Delete ----------------
 @customers_blueprint.route('/customers/bulk-delete', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('customers.delete')
 def bulk_delete_customers():
     data = request.get_json() or {}
     ids_to_delete: List[str] = data.get('ids', [])

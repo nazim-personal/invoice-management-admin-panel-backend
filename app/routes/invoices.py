@@ -12,10 +12,11 @@ from app.database.models.payment import Payment
 from app.database.models.product import Product
 from app.schemas.invoice_schema import invoice_schema
 from app.utils.error_messages import ERROR_MESSAGES
-from app.utils.auth import require_admin
+from app.utils.auth import require_admin, require_permission
 from app.utils.response import success_response, error_response
 from app.utils.pagination import get_pagination
 from app.utils.utils import calculate_invoice_totals, generate_invoice_number, update_invoice_status
+from app.utils.pdf_generator import InvoicePDFGenerator
 
 
 invoices_blueprint = Blueprint('invoices', __name__)
@@ -24,6 +25,7 @@ invoices_blueprint = Blueprint('invoices', __name__)
 
 @invoices_blueprint.route('/invoices', methods=['GET'])
 @jwt_required()
+@require_permission('invoices.view')
 def list_invoices():
     try:
         page, per_page = get_pagination()
@@ -54,6 +56,7 @@ def list_invoices():
 
 @invoices_blueprint.route('/invoices/<string:invoice_id>', methods=['GET'])
 @jwt_required()
+@require_permission('invoices.view')
 def get_invoice(invoice_id):
     try:
         invoice = Invoice.find_by_id(invoice_id)
@@ -79,7 +82,7 @@ def get_invoice(invoice_id):
 
 @invoices_blueprint.route('/invoices', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('invoices.create')
 def create_invoice():
     data = request.get_json()
     if not data:
@@ -167,7 +170,7 @@ def create_invoice():
 
 @invoices_blueprint.route('/invoices/<string:invoice_id>', methods=['PUT'])
 @jwt_required()
-@require_admin
+@require_permission('invoices.update')
 def update_invoice(invoice_id: str):
     data = request.get_json()
     if not data:
@@ -259,7 +262,7 @@ def update_invoice(invoice_id: str):
 # ---------------- Bulk Restore ----------------
 @invoices_blueprint.route('/invoices/bulk-restore', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('invoices.restore')
 def restore_invoices():
     data = request.get_json() or {}
     ids_to_restore: List[str] = data.get('ids', [])
@@ -279,7 +282,7 @@ def restore_invoices():
 # ---------------- Bulk Delete ----------------
 @invoices_blueprint.route('/invoices/bulk-delete', methods=['POST'])
 @jwt_required()
-@require_admin
+@require_permission('invoices.delete')
 def bulk_delete_invoices():
     data = request.get_json() or {}
     ids_to_delete: List[str] = data.get('ids', [])
@@ -294,3 +297,75 @@ def bulk_delete_invoices():
         return error_response('not_found', "No matching invoices found for the provided IDs.", 404)
     except Exception as e:
         return error_response('server_error', ERROR_MESSAGES["server_error"].get("delete_invoice", "Error deleting invoices."), details=str(e), status=500)
+
+
+# ---------------- PDF Generation ----------------
+@invoices_blueprint.route('/invoices/<string:invoice_id>/pdf', methods=['GET'])
+@jwt_required()
+@require_permission('invoices.view')
+def generate_invoice_pdf(invoice_id: str):
+    """
+    Generate and download professional invoice PDF with QR code
+    """
+    try:
+        from flask import send_file
+
+        # Fetch invoice with all related data
+        invoice = Invoice.find_by_id(invoice_id)
+        if not invoice:
+            return error_response('not_found', ERROR_MESSAGES["not_found"]["invoice"], 404)
+
+        # Get customer details
+        customer = Customer.find_by_id(invoice.customer_id)
+        if not customer:
+            return error_response('not_found', "Customer not found for this invoice.", 404)
+
+        # Get invoice items
+        items = InvoiceItem.find_by_invoice_id(invoice_id)
+
+        # Format invoice data for PDF
+        invoice_data = {
+            'invoice_number': invoice.invoice_number,
+            'invoice_date': invoice.invoice_date.strftime('%b %d, %Y') if invoice.invoice_date else 'N/A',
+            'due_date': invoice.due_date.strftime('%b %d, %Y') if invoice.due_date else 'N/A',
+            'status': invoice.status,
+            'payment_terms': getattr(invoice, 'payment_terms', '30'),
+            'notes': getattr(invoice, 'notes', 'Thank you for your business!'),  # Dynamic notes
+            'customer': {
+                'name': customer.name or 'N/A',
+                'address': customer.address or '',
+                'city': customer.city or '',
+                'state': customer.state or '',
+                'gst_number': customer.gst_number or 'N/A'
+            },
+            'items': [],
+            'subtotal': float(invoice.subtotal) if invoice.subtotal else 0.0,
+            'tax_amount': float(invoice.tax_amount) if invoice.tax_amount else 0.0,
+            'total': float(invoice.total) if invoice.total else 0.0
+        }
+
+        # Add items with product details
+        for item in items:
+            product = Product.find_by_id(item.product_id)
+            invoice_data['items'].append({
+                'product_name': product.name if product else 'Unknown Product',
+                'quantity': item.quantity,
+                'price': float(item.unit_price) if item.unit_price else 0.0,
+                'tax_rate': float(item.tax_rate) if item.tax_rate else 0.0,
+                'total': float(item.total_price) if item.total_price else 0.0
+            })
+
+        # Generate PDF
+        pdf_generator = InvoicePDFGenerator()
+        pdf_buffer = pdf_generator.generate_invoice_pdf(invoice_data)
+
+        # Send PDF as file download
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'invoice-{invoice.invoice_number}.pdf'
+        )
+
+    except Exception as e:
+        return error_response('server_error', 'Error generating invoice PDF.', details=str(e), status=500)

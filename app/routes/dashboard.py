@@ -7,14 +7,14 @@ from app.database.models.dashboard_model import (
     get_latest_invoices
 )
 from app.utils.response import success_response
-from app.utils.auth import require_admin
+from app.utils.auth import require_admin, require_permission
 
 dashboard_bp = Blueprint('dashboard_bp', __name__)
 
 @dashboard_bp.route('/dashboard/stats', methods=['GET'])
 @jwt_required()
-@require_admin
-def get_dashboard_overview():
+@require_permission('dashboard.view')
+def get_dashboard_stats():
     """
     Get comprehensive dashboard analytics.
     Includes:

@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app.database.models.user import User
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
-from app.utils.auth import require_admin
+from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
 from app.schemas.user_schema import UserUpdateSchema
 
@@ -27,10 +27,10 @@ def update_current_user_profile():
     current_user_id = get_jwt_identity()
     return update_user_profile(current_user_id)
 
-@users_blueprint.route('/users/<int:user_id>', methods=['PUT'])
+@users_blueprint.route('/users/<string:user_id>', methods=['PUT'])
 @jwt_required()
-@require_admin
-def update_user_profile_by_admin(user_id):
+@require_permission('users.update')
+def update_user_by_id(user_id: str):
     return update_user_profile(user_id)
 
 def update_user_profile(user_id):
@@ -53,9 +53,9 @@ def update_user_profile(user_id):
         validated_data = UserUpdateSchema().load(data)
     except ValidationError as err:
         return error_response(
-            error_code='validation_error', 
-            message=ERROR_MESSAGES["validation"]["invalid_data"], 
-            details=err.messages, 
+            error_code='validation_error',
+            message=ERROR_MESSAGES["validation"]["invalid_data"],
+            details=err.messages,
             status=400
         )
 
@@ -79,18 +79,17 @@ def update_user_profile(user_id):
 
 @users_blueprint.route('/users', methods=['GET'])
 @jwt_required()
-@require_admin
-def get_users():
+@require_permission('users.view')
+def get_all_users():
     page, per_page = get_pagination()
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
     try:
         users, total = User.find_with_pagination_and_count(page=page, per_page=per_page, include_deleted=include_deleted)
-        return success_response({
-            'users': [u.to_dict() for u in users],
-            'total': total,
-            'page': page,
-            'per_page': per_page
-        }, message="Users retrieved successfully")
+        return success_response(
+            [u.to_dict() for u in users],
+            message="Users retrieved successfully",
+            meta={'total': total, 'page': page, 'per_page': per_page}
+        )
     except Exception as e:
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_user"], details=str(e), status=500)
 
@@ -113,10 +112,10 @@ def get_user(user_id):
     except Exception as e:
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_user"], details=str(e), status=500)
 
-@users_blueprint.route('/users/<int:user_id>', methods=['DELETE'])
+@users_blueprint.route('/users/<string:user_id>', methods=['DELETE'])
 @jwt_required()
-@require_admin
-def delete_user(user_id):
+@require_permission('users.delete')
+def delete_user(user_id: str):
     try:
         if not User.soft_delete(user_id):
             return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["user"], status=404)
