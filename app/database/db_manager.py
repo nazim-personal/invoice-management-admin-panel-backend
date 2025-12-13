@@ -94,3 +94,10 @@ class DBManager:
             raise e
         finally:
             conn.close()
+    @staticmethod
+    def get_connection():
+        """
+        Returns a raw database connection.
+        Useful for initialization scripts that need direct access.
+        """
+        return get_db_connection()
