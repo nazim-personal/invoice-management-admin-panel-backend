@@ -5,6 +5,7 @@ from decimal import Decimal
 
 class InvoiceItem(BaseModel):
     _table_name = 'invoice_items'
+    _allowed_fields = {'invoice_id', 'product_id', 'quantity', 'price', 'total'}
 
     def __init__(self, **kwargs):
         # Let the base model set all attributes from the database row
@@ -14,7 +15,7 @@ class InvoiceItem(BaseModel):
         # This corrects any automatic type conversions (e.g., INT to Decimal) by the DB driver.
         if hasattr(self, 'quantity') and self.quantity is not None:
             self.quantity = int(self.quantity)
-        
+
         if hasattr(self, 'price') and self.price is not None:
             self.price = Decimal(self.price)
 
@@ -25,7 +26,7 @@ class InvoiceItem(BaseModel):
         # Ensure price and total are converted to float for JSON serialization
         price_float = float(self.price) if self.price is not None else 0.0
         total_float = float(self.total) if self.total is not None else 0.0
-        
+
         product_details = {
             'name': getattr(self, 'product_name', None),
             'product_code': getattr(self, 'product_code', None),
@@ -54,8 +55,8 @@ class InvoiceItem(BaseModel):
                 ii.id, ii.invoice_id, ii.product_id, ii.quantity, ii.price, ii.total,
                 p.name as product_name, p.product_code, p.description as product_description, p.stock
             FROM invoice_items ii
-            JOIN products p ON ii.product_id = p.id
-            WHERE ii.invoice_id = %s
+            LEFT JOIN products p ON ii.product_id = p.id
+            WHERE ii.invoice_id = %s AND ii.deleted_at IS NULL
         """
         params = (invoice_id,)
         rows = DBManager.execute_query(query, params, fetch='all')

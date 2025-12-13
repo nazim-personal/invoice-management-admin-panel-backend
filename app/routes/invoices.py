@@ -191,7 +191,8 @@ def update_invoice(invoice_id: str):
 
             # Adjust stock differences
             for pid in all_pids:
-                Product.update_stock(pid, old_items.get(pid, 0) - new_items.get(pid, 0))
+                stock_change = old_items.get(pid, 0) - new_items.get(pid, 0)
+                Product.update_product(pid, {"stock_change": stock_change})
 
             # Replace invoice items
             InvoiceItem.delete_by_invoice_id(invoice_id)
@@ -202,8 +203,9 @@ def update_invoice(invoice_id: str):
                 InvoiceItem.create({
                     'invoice_id': invoice_id,
                     'product_id': i['product_id'],
-                    'quantity': i['quantity'],
-                    'price': product.price
+                    'quantity': int(i['quantity']),
+                    'price': Decimal(product.price),
+                    'total': Decimal(product.price) * int(i['quantity'])
                 })
 
         # --- Recalculate totals if needed ---
