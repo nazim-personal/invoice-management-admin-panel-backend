@@ -76,7 +76,7 @@ def update_user_profile(user_id):
 
 @users_blueprint.route('/users', methods=['GET'])
 @jwt_required()
-@require_permission('users.view')
+@require_permission('users.list')
 def get_all_users():
     page, per_page = get_pagination()
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'

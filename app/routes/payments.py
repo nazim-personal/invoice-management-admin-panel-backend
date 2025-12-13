@@ -64,7 +64,7 @@ def record_payment(invoice_id):
 
 @payments_blueprint.route('/payments', methods=['GET'])
 @jwt_required()
-@require_permission('payments.view')
+@require_permission('payments.list')
 def get_all_payments():
     page, per_page = get_pagination()
     try:

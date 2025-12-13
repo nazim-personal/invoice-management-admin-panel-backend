@@ -73,7 +73,7 @@ def create_customer():
 # ---------------- Get Customers ----------------
 @customers_blueprint.route('/customers', methods=['GET'])
 @jwt_required()
-@require_permission('customers.view')
+@require_permission('customers.list')
 def get_customers():
     page, per_page = get_pagination()
     q = request.args.get('q')

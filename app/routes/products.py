@@ -58,7 +58,7 @@ def create_product():
 
 @products_blueprint.route('/products', methods=['GET'])
 @jwt_required()
-@require_permission('products.view')
+@require_permission('products.list')
 def get_products():
     page, per_page = get_pagination()
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'

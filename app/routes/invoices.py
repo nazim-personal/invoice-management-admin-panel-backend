@@ -26,7 +26,7 @@ invoices_blueprint = Blueprint('invoices', __name__)
 
 @invoices_blueprint.route('/invoices', methods=['GET'])
 @jwt_required()
-@require_permission('invoices.view')
+@require_permission('invoices.list')
 def list_invoices():
     try:
         page, per_page = get_pagination()
