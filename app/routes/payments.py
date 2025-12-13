@@ -10,6 +10,7 @@ from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
 from app.utils.utils import update_invoice_status
+from app.utils.helpers import validate_request, get_or_404
 
 payments_blueprint = Blueprint('payments', __name__)
 
@@ -35,17 +36,13 @@ def search_payments():
 @jwt_required()
 @require_permission('payments.create')
 def record_payment(invoice_id):
-    data = request.get_json()
-    if not data:
-        return error_response(error_code='validation_error', message=ERROR_MESSAGES["validation"]["request_body_empty"], status=400)
+    try:
+        validated_data = validate_request(payment_schema)
+    except ValueError as err:
+        return error_response(error_code='validation_error', message="The provided payment data is invalid.", details=err.args[0], status=400)
 
     try:
-        validated_data = payment_schema.load(data)
-    except ValidationError as err:
-        return error_response(error_code='validation_error', message="The provided payment data is invalid.", details=err.messages, status=400)
-
-    try:
-        invoice = Invoice.find_by_id(invoice_id)
+        invoice = get_or_404(Invoice, invoice_id, "Invoice")
         if not invoice:
             return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["invoice"], status=404)
 
@@ -87,22 +84,12 @@ def get_all_payments():
 def get_payments_for_invoice(invoice_id):
     page, per_page = get_pagination()
     try:
-        invoice = Invoice.find_by_id(invoice_id)
+        invoice = get_or_404(Invoice, invoice_id, "Invoice")
         if not invoice:
             return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["invoice"], status=404)
 
-        # Get payments for this invoice - using find_with_pagination if available
-        # For now, return all payments filtered by invoice_id
-        try:
-            payments, total = Payment.find_by_invoice_id_with_pagination_and_count(invoice_id, page=page, per_page=per_page)
-        except AttributeError:
-            # Fallback if the method doesn't exist
-            all_payments = Payment.find_all()
-            filtered = [p for p in all_payments if str(p.invoice_id) == str(invoice_id)]
-            start = (page - 1) * per_page
-            end = start + per_page
-            payments = filtered[start:end]
-            total = len(filtered)
+        # Get payments for this invoice
+        payments, total = Payment.find_by_invoice_id_with_pagination_and_count(invoice_id, page=page, per_page=per_page)
 
         serialized_payments = payment_schema.dump(payments, many=True)
         return success_response(

@@ -60,7 +60,7 @@ class Invoice(BaseModel):
         for field in ['subtotal_amount', 'discount_amount', 'tax_amount', 'total_amount']:
             if field in data and data[field] is not None:
                 data[field] = Decimal(data[field]).quantize(Decimal('0.00'))
-        
+
         data['updated_at'] = datetime.now()
 
         set_clauses = []
@@ -100,8 +100,8 @@ class Invoice(BaseModel):
             where.append("i.deleted_at IS NULL")
 
         params = []
-        query_base = """ 
-            SELECT i.*, 
+        query_base = """
+            SELECT i.*,
                    c.id AS customer_id,
                    c.name AS customer_name,
                    c.phone AS customer_phone,
@@ -133,8 +133,8 @@ class Invoice(BaseModel):
 
         count_query_params = tuple(params[:-2])
         count_query = """
-            SELECT COUNT(DISTINCT i.id) as total 
-            FROM invoices i 
+            SELECT COUNT(DISTINCT i.id) as total
+            FROM invoices i
             JOIN customers c ON i.customer_id = c.id
         """ + where_sql
 
@@ -142,12 +142,5 @@ class Invoice(BaseModel):
         total = count_result['total'] if count_result else 0
 
         return invoices, total
-    
-    @classmethod
-    def bulk_soft_delete(cls, ids):
-        if not ids:
-            return 0
-        placeholders = ', '.join(['%s'] * len(ids))
-        query = f"UPDATE {cls._table_name} SET deleted_at = NOW() WHERE id IN ({placeholders}) AND deleted_at IS NULL"
-        DBManager.execute_write_query(query, tuple(ids))
-        return len(ids)
+
+

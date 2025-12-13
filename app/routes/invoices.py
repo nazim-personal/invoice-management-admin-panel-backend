@@ -17,6 +17,7 @@ from app.utils.response import success_response, error_response
 from app.utils.pagination import get_pagination
 from app.utils.utils import calculate_invoice_totals, generate_invoice_number, update_invoice_status
 from app.utils.pdf_generator import InvoicePDFGenerator
+from app.utils.helpers import validate_request, get_or_404, bulk_action_handler
 
 
 invoices_blueprint = Blueprint('invoices', __name__)
@@ -89,9 +90,9 @@ def create_invoice():
         return error_response('validation_error', ERROR_MESSAGES["validation"]["request_body_empty"], status=400)
 
     try:
-        validated: Dict[str, Any] = invoice_schema.load(data)
-    except ValidationError as err:
-        return error_response('validation_error', 'Invalid data provided.', err.messages, 400)
+        validated = validate_request(invoice_schema)
+    except ValueError as err:
+        return error_response('validation_error', 'Invalid data provided.', err.args[0], 400)
 
     try:
         customer = Customer.find_by_id(validated['customer_id'])
@@ -138,8 +139,9 @@ def create_invoice():
             return error_response('server_error', "Invoice creation failed.", 500)
 
         # Create invoice items & update stock
+        items_data = []
         for i in items:
-            InvoiceItem.create({
+            items_data.append({
                 'invoice_id': invoice_id,
                 'product_id': i['product_id'],
                 'quantity': int(i['quantity']),
@@ -147,6 +149,8 @@ def create_invoice():
                 'total': Decimal(i['price']) * int(i['quantity'])
             })
             Product.update_product(i['product_id'], {"stock_change": -i['quantity']})
+
+        InvoiceItem.bulk_create(items_data)
 
         # Record initial payment
         if initial_payment:
@@ -199,17 +203,19 @@ def update_invoice(invoice_id: str):
 
             # Replace invoice items
             InvoiceItem.delete_by_invoice_id(invoice_id)
+            items_data = []
             for i in validated['items']:
                 product = Product.find_by_id(i['product_id'])
                 if not product:
                     return error_response('not_found', f"Product ID {i['product_id']} not found.", 404)
-                InvoiceItem.create({
+                items_data.append({
                     'invoice_id': invoice_id,
                     'product_id': i['product_id'],
                     'quantity': int(i['quantity']),
                     'price': Decimal(product.price),
                     'total': Decimal(product.price) * int(i['quantity'])
                 })
+            InvoiceItem.bulk_create(items_data)
 
         # --- Recalculate totals if needed ---
         if {'items', 'discount_amount', 'tax_percent'} & validated.keys():
@@ -270,13 +276,7 @@ def restore_invoices():
     if not ids_to_restore or not isinstance(ids_to_restore, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    try:
-        restored_count = Invoice.bulk_restore(ids_to_restore)
-        if restored_count > 0:
-            return success_response(message=f"{restored_count} invoice(s) restored successfully.")
-        return error_response('not_found', "No matching invoices found for the provided IDs.", 404)
-    except Exception as e:
-        return error_response('server_error', ERROR_MESSAGES["server_error"].get("restore_invoice", "Error restoring invoices."), details=str(e), status=500)
+    return bulk_action_handler(ids_to_restore, Invoice.bulk_restore, "{count} invoice(s) restored successfully.", "No matching invoices found for the provided IDs.")
 
 
 # ---------------- Bulk Delete ----------------
@@ -290,13 +290,7 @@ def bulk_delete_invoices():
     if not ids_to_delete or not isinstance(ids_to_delete, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    try:
-        deleted_count = Invoice.bulk_soft_delete(ids_to_delete)
-        if deleted_count > 0:
-            return success_response(message=f"{deleted_count} invoice(s) soft-deleted successfully.")
-        return error_response('not_found', "No matching invoices found for the provided IDs.", 404)
-    except Exception as e:
-        return error_response('server_error', ERROR_MESSAGES["server_error"].get("delete_invoice", "Error deleting invoices."), details=str(e), status=500)
+    return bulk_action_handler(ids_to_delete, Invoice.bulk_soft_delete, "{count} invoice(s) soft-deleted successfully.", "No matching invoices found for the provided IDs.")
 
 
 # ---------------- PDF Generation ----------------

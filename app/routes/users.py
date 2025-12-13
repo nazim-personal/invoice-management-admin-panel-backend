@@ -8,6 +8,7 @@ from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
+from app.utils.helpers import validate_request, get_or_404
 from app.schemas.user_schema import UserUpdateSchema
 
 users_blueprint = Blueprint('users', __name__)
@@ -16,7 +17,7 @@ users_blueprint = Blueprint('users', __name__)
 @jwt_required()
 def get_current_user_profile():
     current_user_id = get_jwt_identity()
-    user = User.find_by_id(current_user_id)
+    user = get_or_404(User, current_user_id, "User")
     if user:
         return success_response(user.to_dict(), message="User profile retrieved successfully")
     return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["user"], status=404)
@@ -45,17 +46,13 @@ def update_user_profile(user_id):
     if not target_user:
         return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["user"], status=404)
 
-    data = request.get_json()
-    if not data:
-        return error_response(error_code='validation_error', message=ERROR_MESSAGES["validation"]["request_body_empty"], status=400)
-
     try:
-        validated_data = UserUpdateSchema().load(data)
-    except ValidationError as err:
+        validated_data = validate_request(UserUpdateSchema())
+    except ValueError as err:
         return error_response(
             error_code='validation_error',
             message=ERROR_MESSAGES["validation"]["invalid_data"],
-            details=err.messages,
+            details=err.args[0],
             status=400
         )
 

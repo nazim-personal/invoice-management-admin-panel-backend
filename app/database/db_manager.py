@@ -76,3 +76,21 @@ class DBManager:
             raise e
         finally:
             conn.close()
+
+    @staticmethod
+    def execute_bulk_write_query(query, params_list):
+        """
+        Executes a bulk write query using executemany.
+        params_list should be a list of tuples/lists.
+        """
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.executemany(query, params_list or [])
+            conn.commit()
+            return True
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()

@@ -44,10 +44,23 @@ class Payment(BaseModel):
         query = f"SELECT * FROM {cls._table_name} WHERE invoice_id = %s ORDER BY payment_date DESC"
         rows = DBManager.execute_query(query, (invoice_id,), fetch='all')
         return [cls.from_row(row) for row in rows] if rows else []
-    
+
     @classmethod
     def find_latest_by_invoice_id(cls, invoice_id):
         # return only one (latest) payment
         query = f"SELECT * FROM {cls._table_name} WHERE invoice_id = %s ORDER BY payment_date DESC LIMIT 1"
         row = DBManager.execute_query(query, (invoice_id,), fetch='one')
         return cls.from_row(row) if row else None
+
+    @classmethod
+    def find_by_invoice_id_with_pagination_and_count(cls, invoice_id, page=1, per_page=10):
+        offset = (page - 1) * per_page
+        query = f"SELECT * FROM {cls._table_name} WHERE invoice_id = %s ORDER BY payment_date DESC LIMIT %s OFFSET %s"
+        rows = DBManager.execute_query(query, (invoice_id, per_page, offset), fetch='all')
+        items = [cls.from_row(row) for row in rows] if rows else []
+
+        count_query = f"SELECT COUNT(*) as total FROM {cls._table_name} WHERE invoice_id = %s"
+        count_result = DBManager.execute_query(count_query, (invoice_id,), fetch='one')
+        total = count_result['total'] if count_result else 0
+
+        return items, total

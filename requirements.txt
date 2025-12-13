@@ -11,7 +11,7 @@ MarkupSafe==3.0.3
 marshmallow==4.1.1
 mysql-connector-python==9.5.0
 packaging==25.0
-Pillow==10.1.0
+Pillow>=11.0.0
 PyJWT==2.10.1
 PyMySQL==1.1.2
 python-dateutil==2.9.0.post0

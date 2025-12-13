@@ -8,7 +8,9 @@ from app.schemas.product_schema import ProductSchema
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
+from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
+from app.utils.helpers import validate_request, get_or_404, bulk_action_handler
 
 products_blueprint = Blueprint('products', __name__)
 
@@ -16,17 +18,7 @@ product_schema = ProductSchema()
 product_update_schema = ProductSchema(partial=True)
 
 
-def validate_json(schema: ProductSchema, partial: bool = False) -> Dict[str, Any]:
-    """
-    Helper function to validate request JSON using Marshmallow schema.
-    Ensures the request JSON is a dictionary before validation.
-    """
-    raw_data = request.get_json()
-    if not raw_data or not isinstance(raw_data, dict):
-        raise ValidationError(ERROR_MESSAGES["validation"]["request_body_empty"])
 
-    validated_data: Dict[str, Any] = schema.load(raw_data, partial=partial)
-    return validated_data
 
 
 
@@ -51,15 +43,15 @@ def search_products():
 @require_permission('products.create')
 def create_product():
     try:
-        validated_data = validate_json(product_schema)
+        validated_data = validate_request(product_schema)
         product_id = Product.create_product(validated_data)
         product = Product.find_by_id(product_id)
         if product:
             return success_response(product_schema.dump(product),
                                     message="Product created successfully.", status=201)
         return error_response('server_error', ERROR_MESSAGES["server_error"]["create_product"], status=500)
-    except ValidationError as err:
-        return error_response('validation_error', message="Invalid data.", details=err.messages, status=400)
+    except ValueError as err:
+        return error_response('validation_error', message="Invalid data.", details=err.args[0], status=400)
     except Exception as e:
         return error_response('server_error', ERROR_MESSAGES["server_error"]["create_product"], details=str(e), status=500)
 
@@ -98,35 +90,17 @@ def get_product(product_id):
 @require_permission('products.update')
 def update_product(product_id):
     try:
-        validated_data = validate_json(product_update_schema, partial=True)
+        validated_data = validate_request(product_update_schema, partial=True)
         if not Product.update_product(product_id, validated_data):
             return error_response('not_found', ERROR_MESSAGES["not_found"]["product"], status=404)
         updated_product = Product.find_by_id(product_id)
         return success_response(product_schema.dump(updated_product), message="Product updated successfully.")
-    except ValidationError as err:
-        return error_response('validation_error', message="Invalid data.", details=err.messages, status=400)
+    except ValueError as err:
+        return error_response('validation_error', message="Invalid data.", details=err.args[0], status=400)
     except Exception as e:
         return error_response('server_error', ERROR_MESSAGES["server_error"]["update_product"], details=str(e), status=500)
 
-def bulk_action_handler(ids: List[str], action_func, success_msg: str, not_found_msg: str):
-    """
-    Generic handler for bulk restore / soft-delete actions.
-    """
-    if not ids:  # Only check for empty list
-        return error_response('validation_error', "Invalid request. 'ids' must be a non-empty list.", 400)
 
-    try:
-        affected_count = action_func(ids)
-        if affected_count > 0:
-            return success_response(message=f"{affected_count} product(s) {success_msg}")
-        return error_response('not_found', not_found_msg, 404)
-    except Exception as e:
-        return error_response(
-            'server_error',
-            ERROR_MESSAGES["server_error"].get(success_msg.replace(" ", "_"), success_msg),
-            details=str(e),
-            status=500
-        )
 
 
 @products_blueprint.route('/products/bulk-restore', methods=['POST'])
@@ -135,7 +109,7 @@ def bulk_action_handler(ids: List[str], action_func, success_msg: str, not_found
 def bulk_restore_products():
     data = request.get_json() or {}
     ids = data.get('ids', [])
-    return bulk_action_handler(ids, Product.bulk_restore, "restored successfully", "No matching product found for the provided IDs.")
+    return bulk_action_handler(ids, Product.bulk_restore, "{count} product(s) restored successfully", "No matching product found for the provided IDs.")
 
 
 @products_blueprint.route('/products/bulk-delete', methods=['POST'])
@@ -144,4 +118,4 @@ def bulk_restore_products():
 def bulk_delete_products():
     data = request.get_json() or {}
     ids = data.get('ids', [])
-    return bulk_action_handler(ids, Product.bulk_soft_delete, "soft-deleted successfully", "No matching products found for the provided IDs.")
+    return bulk_action_handler(ids, Product.bulk_soft_delete, "{count} product(s) soft-deleted successfully", "No matching products found for the provided IDs.")

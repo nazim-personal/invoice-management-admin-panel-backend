@@ -14,6 +14,7 @@ from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
+from app.utils.helpers import validate_request, bulk_action_handler
 
 customers_blueprint = Blueprint('customers', __name__)
 
@@ -24,12 +25,7 @@ customer_detail_schema = CustomerDetailSchema()
 customer_update_schema = CustomerUpdateSchema()
 
 
-def validate_request(schema, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Validate request data against Marshmallow schema."""
-    try:
-        return schema.load(data)
-    except ValidationError as err:
-        raise ValueError(err.messages)
+
 
 
 def get_existing_customer_by_email(email: str):
@@ -165,13 +161,7 @@ def restore_customer():
     if not ids_to_restore or not isinstance(ids_to_restore, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    try:
-        restored_count = Customer.bulk_restore(ids_to_restore)
-        if restored_count > 0:
-            return success_response(message=f"{restored_count} customer(s) restored successfully.")
-        return error_response('not_found', "No matching customers found for the provided IDs.", 404)
-    except Exception as e:
-        return error_response('server_error', ERROR_MESSAGES["server_error"]["restore_customer"], details=str(e), status=500)
+    return bulk_action_handler(ids_to_restore, Customer.bulk_restore, "{count} customer(s) restored successfully.", "No matching customers found for the provided IDs.")
 
 
 # ---------------- Bulk Delete ----------------
@@ -185,10 +175,4 @@ def bulk_delete_customers():
     if not ids_to_delete or not isinstance(ids_to_delete, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    try:
-        deleted_count = Customer.bulk_soft_delete(ids_to_delete)
-        if deleted_count > 0:
-            return success_response(message=f"{deleted_count} customer(s) soft-deleted successfully.")
-        return error_response('not_found', "No matching customers found for the provided IDs.", 404)
-    except Exception as e:
-        return error_response('server_error', ERROR_MESSAGES["server_error"]["delete_customer"], details=str(e), status=500)
+    return bulk_action_handler(ids_to_delete, Customer.bulk_soft_delete, "{count} customer(s) soft-deleted successfully.", "No matching customers found for the provided IDs.")

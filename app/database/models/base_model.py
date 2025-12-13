@@ -49,6 +49,43 @@ class BaseModel:
             raise ValueError(f"Failed to create record in {cls._table_name}: {e}")
 
     @classmethod
+    def bulk_create(cls: Type[T], data_list: List[Dict[str, Any]]) -> int:
+        """
+        Bulk insert multiple records.
+        """
+        if not cls._table_name:
+            raise ValueError("Model must define _table_name")
+        if not data_list:
+            return 0
+
+        # Prepare data
+        columns = set()
+        values_list = []
+
+        # First pass to get all columns and ensure IDs
+        for data in data_list:
+            data.setdefault("id", str(uuid7()))
+            data.setdefault("created_at", datetime.now(timezone.utc))
+            # Filter allowed fields
+            filtered = {k: v for k, v in data.items() if not cls._allowed_fields or k in cls._allowed_fields or k == "id"}
+            columns.update(filtered.keys())
+
+        sorted_columns = sorted(list(columns))
+        placeholders = ", ".join(["%s"] * len(sorted_columns))
+        query = f"INSERT INTO {cls._table_name} ({', '.join(sorted_columns)}) VALUES ({placeholders})"
+
+        for data in data_list:
+            # Ensure all columns are present, default to None
+            row_values = [data.get(col) for col in sorted_columns]
+            values_list.append(tuple(row_values))
+
+        try:
+            DBManager.execute_bulk_write_query(query, values_list)
+            return len(values_list)
+        except Exception as e:
+             raise ValueError(f"Failed to bulk create in {cls._table_name}: {e}")
+
+    @classmethod
     def update(cls: Type[T], record_id: str, data: Dict[str, Any]) -> bool:
         if not cls._table_name:
             raise ValueError("Model must define _table_name")

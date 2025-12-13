@@ -6,6 +6,7 @@ from app.utils.auth import require_admin
 from app.utils.permissions import PERMISSIONS, PERMISSION_CATEGORIES
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
+from app.utils.helpers import get_or_404
 
 permissions_blueprint = Blueprint('permissions', __name__)
 
@@ -33,7 +34,7 @@ def get_user_permissions(user_id: str):
     Admin users automatically have all permissions.
     """
     try:
-        user = User.find_by_id(user_id)
+        user = get_or_404(User, user_id, "User")
         if not user:
             return error_response('not_found', ERROR_MESSAGES["not_found"]["user"], 404)
 
@@ -66,7 +67,7 @@ def update_user_permissions(user_id: str):
         return error_response('validation_error', 'Permissions must be an array.', 400)
 
     try:
-        user = User.find_by_id(user_id)
+        user = get_or_404(User, user_id, "User")
         if not user:
             return error_response('not_found', ERROR_MESSAGES["not_found"]["user"], 404)
 
@@ -100,7 +101,7 @@ def grant_permission(user_id: str, permission: str):
     Grant a single permission to a user.
     """
     try:
-        user = User.find_by_id(user_id)
+        user = get_or_404(User, user_id, "User")
         if not user:
             return error_response('not_found', ERROR_MESSAGES["not_found"]["user"], 404)
 
@@ -131,7 +132,7 @@ def revoke_permission(user_id: str, permission: str):
     Revoke a single permission from a user.
     """
     try:
-        user = User.find_by_id(user_id)
+        user = get_or_404(User, user_id, "User")
         if not user:
             return error_response('not_found', ERROR_MESSAGES["not_found"]["user"], 404)
 
