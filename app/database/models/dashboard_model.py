@@ -7,13 +7,13 @@ from dateutil.relativedelta import relativedelta
 from app.database.base import get_db_connection
 
 
-def calculate_percentage_change(current: Decimal, previous: Decimal) -> Decimal:
+def calculate_percentage_change(current: float, previous: float) -> float:
     """
     Calculate the percentage change from previous to current.
     """
     if previous == 0:
-        return Decimal("100.0") if current > 0 else Decimal("0.0")
-    return Decimal(((current - previous) / previous) * 100)
+        return 100.0 if current > 0 else 0.0
+    return ((current - previous) / previous) * 100
 
 
 def get_dashboard_stats() -> Dict[str, Any]:
@@ -36,7 +36,7 @@ def get_dashboard_stats() -> Dict[str, Any]:
                 (first_day_current_month,),
             )
             row = cur.fetchone() or {}
-            total_revenue = Decimal(row.get("total_revenue", 0))
+            total_revenue = float(row.get("total_revenue", 0))
 
             # Total revenue - last month
             cur.execute(
@@ -49,7 +49,7 @@ def get_dashboard_stats() -> Dict[str, Any]:
                 (first_day_last_month, last_day_last_month),
             )
             row = cur.fetchone() or {}
-            last_month_revenue = Decimal(row.get("total_revenue", 0))
+            last_month_revenue = float(row.get("total_revenue", 0))
 
             revenue_change_percent = calculate_percentage_change(
                 total_revenue, last_month_revenue
@@ -82,7 +82,7 @@ def get_dashboard_stats() -> Dict[str, Any]:
             last_month_customers = int(row.get("total_customers", 0))
 
             customers_change_percent = calculate_percentage_change(
-                Decimal(total_customers), Decimal(last_month_customers)
+                float(total_customers), float(last_month_customers)
             )
 
             # Other counts
@@ -106,15 +106,16 @@ def get_dashboard_stats() -> Dict[str, Any]:
 
             return {
                 "total_revenue": total_revenue,
-                "revenue_change_percent": revenue_change_percent,
+                "revenue_change_percent": round(revenue_change_percent, 2),
                 "total_customers": total_customers,
-                "customers_change_percent": customers_change_percent,
+                "customers_change_percent": round(customers_change_percent, 2),
                 "total_invoices": total_invoices,
                 "pending_invoices": pending_invoices,
                 "total_products": total_products,
             }
     finally:
         conn.close()
+
 
 def get_sales_performance() -> List[Dict[str, Any]]:
     """
@@ -129,7 +130,7 @@ def get_sales_performance() -> List[Dict[str, Any]]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT 
+                SELECT
                     DATE_FORMAT(created_at, '%%Y-%%m') AS ym,
                     COALESCE(SUM(total_amount), 0) AS revenue,
                     COUNT(*) AS invoice_count
@@ -144,7 +145,7 @@ def get_sales_performance() -> List[Dict[str, Any]]:
 
             stats_map = {
                 row["ym"]: {
-                    "revenue": Decimal(row["revenue"]),
+                    "revenue": float(row["revenue"]),
                     "count": int(row["invoice_count"])
                 }
                 for row in rows
@@ -160,7 +161,7 @@ def get_sales_performance() -> List[Dict[str, Any]]:
                 ym = month_date.strftime('%Y-%m')
                 label = month_date.strftime('%b %Y')
 
-                month_stats = stats_map.get(ym, {"revenue": Decimal("0.0"), "count": 0})
+                month_stats = stats_map.get(ym, {"revenue": 0.0, "count": 0})
                 results.append({
                     "month": label,
                     "revenue": month_stats["revenue"],
@@ -171,6 +172,7 @@ def get_sales_performance() -> List[Dict[str, Any]]:
     finally:
         conn.close()
 
+
 def get_latest_invoices() -> List[Dict[str, Any]]:
     """
     Fetches the 10 most recent invoices along with customer info and due amount.
@@ -180,9 +182,9 @@ def get_latest_invoices() -> List[Dict[str, Any]]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT 
-                    i.id, 
-                    i.total_amount, 
+                SELECT
+                    i.id,
+                    i.total_amount,
                     i.status,
                     c.id AS customer_id,
                     c.name AS customer_name,
@@ -202,8 +204,8 @@ def get_latest_invoices() -> List[Dict[str, Any]]:
 
             result = []
             for inv in invoices:
-                total_amount = Decimal(inv["total_amount"])
-                amount_paid = Decimal(inv["amount_paid"])
+                total_amount = float(inv["total_amount"])
+                amount_paid = float(inv["amount_paid"])
                 due_amount = total_amount - amount_paid
 
                 result.append({
