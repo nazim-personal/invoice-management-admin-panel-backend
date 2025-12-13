@@ -73,7 +73,14 @@ def init_db():
                 'email': admin_email,
                 'password': admin_password,
                 'name': 'System Administrator',
-                'role': 'admin'
+                'role': 'admin',
+                'company_name': os.getenv('COMPANY_NAME', 'Your Company Name'),
+                'company_address': os.getenv('COMPANY_ADDRESS', '123 Business Street'),
+                'company_city': os.getenv('COMPANY_CITY', 'City, State, PIN'),
+                'company_phone': os.getenv('COMPANY_PHONE', '+91 1234567890'),
+                'company_email': os.getenv('COMPANY_EMAIL', 'info@company.com'),
+                'company_gst': os.getenv('COMPANY_GST', '12ABCDE1234F1Z5'),
+                'currency_symbol': os.getenv('CURRENCY_SYMBOL', '₹')
             }
 
             User.create(admin_data)

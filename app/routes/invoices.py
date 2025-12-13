@@ -9,7 +9,9 @@ from app.database.models.customer import Customer
 from app.database.models.invoice import Invoice
 from app.database.models.invoice_item_model import InvoiceItem
 from app.database.models.payment import Payment
+from app.database.models.payment import Payment
 from app.database.models.product import Product
+from app.database.models.user import User
 from app.schemas.invoice_schema import invoice_schema
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
@@ -232,10 +234,37 @@ def update_invoice(invoice_id: str):
                 'total_amount': total
             })
         else:
-            total = invoice.total_amount
+            total = Decimal(invoice.total_amount)
+
+        # --- Handle "Mark as Paid" ---
+        if validated.get('is_mark_as_paid'):
+            # Calculate amount to pay
+            total_amount = Decimal(invoice.total_amount)
+            # If items were updated, use the new total
+            if 'total_amount' in validated:
+                total_amount = validated['total_amount']
+
+            # Get already paid amount
+            paid_amount = Payment.get_total_paid(invoice_id)
+            remaining_balance = total_amount - paid_amount
+
+            payment_amount = Decimal(validated.get('amount_paid') or remaining_balance)
+
+            if payment_amount > 0:
+                Payment.record_payment({
+                    'invoice_id': invoice_id,
+                    'amount': payment_amount,
+                    'payment_date': date.today(),
+                    'method': 'cash', # Default to cash if not specified
+                    'reference_no': f'Marked as paid via API'
+                })
 
         # --- Update invoice and status ---
+        # Remove non-model fields
         validated.pop('items', None)
+        validated.pop('is_mark_as_paid', None)
+        validated.pop('amount_paid', None)
+
         if validated:
             Invoice.update(invoice_id, validated)
 
@@ -349,8 +378,12 @@ def generate_invoice_pdf(invoice_id: str):
                 'total': float(item.total_price) if item.total_price else 0.0
             })
 
+        # Get current user for company details
+        current_user_id = get_jwt_identity()
+        current_user = User.find_by_id(current_user_id)
+
         # Generate PDF
-        pdf_generator = InvoicePDFGenerator()
+        pdf_generator = InvoicePDFGenerator(user=current_user)
         pdf_buffer = pdf_generator.generate_invoice_pdf(invoice_data)
 
         # Send PDF as file download

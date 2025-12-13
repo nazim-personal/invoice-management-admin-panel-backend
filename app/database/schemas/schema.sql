@@ -34,6 +34,13 @@ CREATE TABLE IF NOT EXISTS users (
   billing_state VARCHAR(120),
   billing_pin VARCHAR(20),
   billing_gst VARCHAR(50),                  -- User's GST number for billing
+  company_name VARCHAR(255),                -- Company Name for PDF
+  company_address TEXT,                     -- Company Address for PDF
+  company_city VARCHAR(120),                -- Company City/State/PIN for PDF
+  company_phone VARCHAR(20),                -- Company Phone for PDF
+  company_email VARCHAR(255),               -- Company Email for PDF
+  company_gst VARCHAR(50),                  -- Company GST for PDF
+  currency_symbol VARCHAR(10) DEFAULT '₹',  -- Currency Symbol for PDF
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp of user creation
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP NULL DEFAULT NULL,   -- Timestamp of soft deletion

@@ -17,5 +17,9 @@ class InvoiceSchema(Schema):
     # Use the new, more flexible schema for initial payments
     initial_payment = fields.Nested(InitialPaymentSchema, allow_none=True)
 
+    # Fields for "Mark as Paid" functionality
+    is_mark_as_paid = fields.Boolean(load_default=False)
+    amount_paid = fields.Decimal(places=2, as_string=True, allow_none=True)
+
 # Create an instance of the schema to be used in the application
 invoice_schema = InvoiceSchema()

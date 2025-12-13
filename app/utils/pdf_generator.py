@@ -16,20 +16,30 @@ class InvoicePDFGenerator:
     Professional invoice PDF generator with QR code for payment
     """
 
-    def __init__(self):
+    def __init__(self, user=None):
         self.width, self.height = A4
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
 
-        # Company details from environment or defaults
-        self.company_name = os.getenv('COMPANY_NAME', 'Your Company Name')
-        self.company_address = os.getenv('COMPANY_ADDRESS', 'Company Address Line 1')
-        self.company_city = os.getenv('COMPANY_CITY', 'City, State, PIN')
-        self.company_phone = os.getenv('COMPANY_PHONE', '+91 1234567890')
-        self.company_email = os.getenv('COMPANY_EMAIL', 'info@company.com')
-        self.company_gst = os.getenv('COMPANY_GST', 'GST: 12ABCDE1234F1Z5')
+        # Company details from user or environment defaults
+        if user:
+            self.company_name = user.company_name or os.getenv('COMPANY_NAME', 'Your Company Name')
+            self.company_address = user.company_address or os.getenv('COMPANY_ADDRESS', 'Company Address Line 1')
+            self.company_city = user.company_city or os.getenv('COMPANY_CITY', 'City, State, PIN')
+            self.company_phone = user.company_phone or os.getenv('COMPANY_PHONE', '+91 1234567890')
+            self.company_email = user.company_email or os.getenv('COMPANY_EMAIL', 'info@company.com')
+            self.company_gst = user.company_gst or os.getenv('COMPANY_GST', 'GST: 12ABCDE1234F1Z5')
+            self.currency_symbol = user.currency_symbol or os.getenv('CURRENCY_SYMBOL', '₹')
+        else:
+            self.company_name = os.getenv('COMPANY_NAME', 'Your Company Name')
+            self.company_address = os.getenv('COMPANY_ADDRESS', 'Company Address Line 1')
+            self.company_city = os.getenv('COMPANY_CITY', 'City, State, PIN')
+            self.company_phone = os.getenv('COMPANY_PHONE', '+91 1234567890')
+            self.company_email = os.getenv('COMPANY_EMAIL', 'info@company.com')
+            self.company_gst = os.getenv('COMPANY_GST', 'GST: 12ABCDE1234F1Z5')
+            self.currency_symbol = os.getenv('CURRENCY_SYMBOL', '₹')
+
         self.upi_id = os.getenv('UPI_ID', 'company@upi')
-        self.currency_symbol = os.getenv('CURRENCY_SYMBOL', '₹')  # Dynamic currency
 
     def _setup_custom_styles(self):
         """Setup custom paragraph styles"""

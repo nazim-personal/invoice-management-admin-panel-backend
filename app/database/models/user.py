@@ -6,7 +6,7 @@ from app.database.db_manager import DBManager
 class User(BaseModel):
     _table_name = 'users'
 
-    def __init__(self, id, username, email, password_hash, role='staff', name=None, phone=None, billing_address=None, billing_city=None, billing_state=None, billing_pin=None, billing_gst=None, **kwargs):
+    def __init__(self, id, username, email, password_hash, role='staff', name=None, phone=None, billing_address=None, billing_city=None, billing_state=None, billing_pin=None, billing_gst=None, company_name=None, company_address=None, company_city=None, company_phone=None, company_email=None, company_gst=None, currency_symbol='₹', **kwargs):
         self.id = id
         self.username = username
         self.email = email
@@ -19,6 +19,13 @@ class User(BaseModel):
         self.billing_state = billing_state
         self.billing_pin = billing_pin
         self.billing_gst = billing_gst
+        self.company_name = company_name
+        self.company_address = company_address
+        self.company_city = company_city
+        self.company_phone = company_phone
+        self.company_email = company_email
+        self.company_gst = company_gst
+        self.currency_symbol = currency_symbol
         # Absorb any extra columns that might be in the database row
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -42,7 +49,14 @@ class User(BaseModel):
             'billing_city': self.billing_city,
             'billing_state': self.billing_state,
             'billing_pin': self.billing_pin,
-            'billing_gst': self.billing_gst
+            'billing_gst': self.billing_gst,
+            'company_name': self.company_name,
+            'company_address': self.company_address,
+            'company_city': self.company_city,
+            'company_phone': self.company_phone,
+            'company_email': self.company_email,
+            'company_gst': self.company_gst,
+            'currency_symbol': self.currency_symbol
         }
 
     @classmethod
@@ -63,8 +77,25 @@ class User(BaseModel):
         username = data['username']
         email = data['email']
 
-        query = f'INSERT INTO {cls._table_name} (id, username, email, password_hash, name, role, phone) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-        DBManager.execute_write_query(query, (user_id, username, email, hashed_password, name, role, phone))
+        # Company Details
+        company_name = data.get('company_name')
+        company_address = data.get('company_address')
+        company_city = data.get('company_city')
+        company_phone = data.get('company_phone')
+        company_email = data.get('company_email')
+        company_gst = data.get('company_gst')
+        currency_symbol = data.get('currency_symbol', '₹')
+
+        query = f'''
+            INSERT INTO {cls._table_name}
+            (id, username, email, password_hash, name, role, phone,
+             company_name, company_address, company_city, company_phone, company_email, company_gst, currency_symbol)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        '''
+        DBManager.execute_write_query(query, (
+            user_id, username, email, hashed_password, name, role, phone,
+            company_name, company_address, company_city, company_phone, company_email, company_gst, currency_symbol
+        ))
 
         # Return the ID directly. The route will be responsible for fetching.
         return user_id

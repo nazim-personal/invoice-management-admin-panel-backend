@@ -64,3 +64,12 @@ class Payment(BaseModel):
         total = count_result['total'] if count_result else 0
 
         return items, total
+
+    @classmethod
+    def get_total_paid(cls, invoice_id):
+        """
+        Calculate total amount paid for an invoice.
+        """
+        query = f"SELECT COALESCE(SUM(amount), 0) as total FROM {cls._table_name} WHERE invoice_id = %s"
+        result = DBManager.execute_query(query, (invoice_id,), fetch='one')
+        return Decimal(result['total']) if result else Decimal(0)

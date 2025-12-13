@@ -119,7 +119,7 @@ def register():
     if not data:
         return error_response(error_code='validation_error', message=ERROR_MESSAGES["validation"]["request_body_empty"], status=400)
 
-    required_fields = ['username', 'email', 'password', 'name']
+    required_fields = ['username', 'email', 'password', 'name', 'company_name', 'company_address', 'company_city', 'company_phone', 'company_email', 'company_gst']
     missing_fields = [field for field in required_fields if field not in data]
     if missing_fields:
         return error_response(error_code='validation_error', message=f"Missing required fields: {', '.join(missing_fields)}", status=400)
@@ -137,7 +137,9 @@ def register():
                 'username': new_user.username,
                 'email': new_user.email,
                 'name': new_user.name,
-                'role': new_user.role
+                'role': new_user.role,
+                'company_name': new_user.company_name,
+                'company_email': new_user.company_email
             }
             return success_response(user_data, message="User registered successfully.", status=201)
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["create_user"], status=500)
