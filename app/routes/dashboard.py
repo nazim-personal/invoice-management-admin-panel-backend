@@ -14,7 +14,7 @@ dashboard_bp = Blueprint('dashboard_bp', __name__)
 @dashboard_bp.route('/dashboard/stats', methods=['GET'])
 @jwt_required()
 @require_permission('dashboard.view')
-def get_dashboard_stats():
+def dashboard_stats_route():
     """
     Get comprehensive dashboard analytics.
     Includes:

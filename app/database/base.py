@@ -15,7 +15,7 @@ def get_db_connection(db_required=True):
     """
     # Get the appropriate configuration from our central Config class
     config = Config.get_db_config(db_required=db_required)
-    
+
     # Use the unpacked config dictionary to establish the connection
     return pymysql.connect(**config)
 

@@ -54,6 +54,8 @@ class User(BaseModel):
 
     @classmethod
     def create(cls, data):
+        from uuid6 import uuid7
+        user_id = str(uuid7())
         hashed_password = generate_password_hash(data['password'], method='scrypt')
         role = data.get('role', 'staff')
         name = data.get('name')
@@ -61,8 +63,8 @@ class User(BaseModel):
         username = data['username']
         email = data['email']
 
-        query = f'INSERT INTO {cls._table_name} (username, email, password_hash, name, role, phone) VALUES (%s, %s, %s, %s, %s, %s)'
-        user_id = DBManager.execute_write_query(query, (username, email, hashed_password, name, role, phone))
+        query = f'INSERT INTO {cls._table_name} (id, username, email, password_hash, name, role, phone) VALUES (%s, %s, %s, %s, %s, %s, %s)'
+        DBManager.execute_write_query(query, (user_id, username, email, hashed_password, name, role, phone))
 
         # Return the ID directly. The route will be responsible for fetching.
         return user_id
