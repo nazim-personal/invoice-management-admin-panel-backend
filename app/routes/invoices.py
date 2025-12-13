@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
@@ -254,3 +254,43 @@ def update_invoice(invoice_id: str):
 
     except Exception as e:
         return error_response('server_error', 'Error updating invoice.', str(e), 500)
+
+
+# ---------------- Bulk Restore ----------------
+@invoices_blueprint.route('/invoices/bulk-restore', methods=['POST'])
+@jwt_required()
+@require_admin
+def restore_invoices():
+    data = request.get_json() or {}
+    ids_to_restore: List[str] = data.get('ids', [])
+
+    if not ids_to_restore or not isinstance(ids_to_restore, list):
+        return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
+
+    try:
+        restored_count = Invoice.bulk_restore(ids_to_restore)
+        if restored_count > 0:
+            return success_response(message=f"{restored_count} invoice(s) restored successfully.")
+        return error_response('not_found', "No matching invoices found for the provided IDs.", 404)
+    except Exception as e:
+        return error_response('server_error', ERROR_MESSAGES["server_error"].get("restore_invoice", "Error restoring invoices."), details=str(e), status=500)
+
+
+# ---------------- Bulk Delete ----------------
+@invoices_blueprint.route('/invoices/bulk-delete', methods=['POST'])
+@jwt_required()
+@require_admin
+def bulk_delete_invoices():
+    data = request.get_json() or {}
+    ids_to_delete: List[str] = data.get('ids', [])
+
+    if not ids_to_delete or not isinstance(ids_to_delete, list):
+        return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
+
+    try:
+        deleted_count = Invoice.bulk_soft_delete(ids_to_delete)
+        if deleted_count > 0:
+            return success_response(message=f"{deleted_count} invoice(s) soft-deleted successfully.")
+        return error_response('not_found', "No matching invoices found for the provided IDs.", 404)
+    except Exception as e:
+        return error_response('server_error', ERROR_MESSAGES["server_error"].get("delete_invoice", "Error deleting invoices."), details=str(e), status=500)

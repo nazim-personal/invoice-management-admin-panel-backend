@@ -9,7 +9,7 @@
 # 1. Find the endpoint you want to test.
 # 2. Copy the entire curl command.
 # 3. Paste it into your terminal or import it into Postman.
-# 4. **IMPORTANT**: Replace placeholder values (e.g., YOUR_ADMIN_TOKEN_HERE, 
+# 4. **IMPORTANT**: Replace placeholder values (e.g., YOUR_ADMIN_TOKEN_HERE,
 #    YOUR_USER_TOKEN_HERE, and ID numbers like 1, 2, 3) with actual values.
 #
 # ==============================================================================
@@ -164,7 +164,7 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_
     "customer_id": 1,
     "due_date": "2024-09-30",
     "items": [
-        {"product_id": 1, "quantity": 10} 
+        {"product_id": 1, "quantity": 10}
     ],
     "status": "Pending",
 
@@ -196,7 +196,7 @@ curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_A
 
 
 echo "\n### Pay an Invoice (Requires Admin Token) ###"
-# NOTE: To test this, first 'Get Invoice by ID' to see the current 'amount_paid', 
+# NOTE: To test this, first 'Get Invoice by ID' to see the current 'amount_paid',
 # then run this command, and then 'Get Invoice by ID' again to see the updated 'amount_paid'.
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
     "amount": "100.00",
@@ -209,6 +209,12 @@ echo "\n### Bulk Delete Invoices (Requires Admin Token) ###"
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
     "ids": [1, 2]
 }' "$BASE_URL/invoices/bulk-delete/"
+
+
+echo "\n### Bulk Restore Invoices (Requires Admin Token) ###"
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
+    "ids": [1, 2]
+}' "$BASE_URL/invoices/bulk-restore/"
 
 # -----------------
 # Dashboard Endpoints
