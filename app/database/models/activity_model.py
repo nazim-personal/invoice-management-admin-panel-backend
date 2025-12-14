@@ -14,7 +14,14 @@ class ActivityLog(BaseModel):
         self.entity_id = entity_id
         self.details = details if isinstance(details, dict) else (json.loads(details) if details else {})
         self.ip_address = ip_address
-        self.created_at = created_at
+        if isinstance(created_at, str):
+            from datetime import datetime
+            try:
+                self.created_at = datetime.fromisoformat(created_at)
+            except (ValueError, TypeError):
+                self.created_at = created_at
+        else:
+            self.created_at = created_at
 
         # Absorb extra
         for key, value in kwargs.items():

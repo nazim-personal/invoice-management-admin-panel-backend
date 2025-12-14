@@ -8,7 +8,7 @@ from app.utils.auth import require_permission
 
 activities_bp = Blueprint('activities', __name__)
 
-@activities_bp.route('/activities', methods=['GET'])
+@activities_bp.route('/activities/', methods=['GET'])
 @jwt_required()
 @require_permission('activities.view_all') # Assuming we might want a permission for this
 def list_all_activities():
@@ -34,7 +34,7 @@ def list_all_activities():
     except Exception as e:
         return error_response('server_error', 'Failed to fetch activities.', str(e), 500)
 
-@activities_bp.route('/activities/me', methods=['GET'])
+@activities_bp.route('/activities/me/', methods=['GET'])
 @jwt_required()
 def list_my_activities():
     """
@@ -60,7 +60,7 @@ def list_my_activities():
     except Exception as e:
         return error_response('server_error', 'Failed to fetch your activities.', str(e), 500)
 
-@activities_bp.route('/invoices/<string:invoice_id>/activities', methods=['GET'])
+@activities_bp.route('/invoices/<string:invoice_id>/activities/', methods=['GET'])
 @jwt_required()
 @require_permission('invoices.view')
 def list_invoice_activities(invoice_id):
@@ -86,7 +86,7 @@ def list_invoice_activities(invoice_id):
     except Exception as e:
         return error_response('server_error', 'Failed to fetch invoice activities.', str(e), 500)
 
-@activities_bp.route('/customers/<string:customer_id>/activities', methods=['GET'])
+@activities_bp.route('/customers/<string:customer_id>/activities/', methods=['GET'])
 @jwt_required()
 @require_permission('customers.view')
 def list_customer_activities(customer_id):

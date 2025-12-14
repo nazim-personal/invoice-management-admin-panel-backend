@@ -6,7 +6,7 @@ from app.utils.auth import require_permission
 
 reports_bp = Blueprint('reports', __name__)
 
-@reports_bp.route('/reports/sales', methods=['GET'])
+@reports_bp.route('/reports/sales/', methods=['GET'])
 @jwt_required()
 @require_permission('reports.view')
 def get_sales_report():
@@ -24,7 +24,7 @@ def get_sales_report():
     except Exception as e:
         return error_response('server_error', 'Failed to fetch sales report.', str(e), 500)
 
-@reports_bp.route('/reports/payments', methods=['GET'])
+@reports_bp.route('/reports/payments/', methods=['GET'])
 @jwt_required()
 @require_permission('reports.view')
 def get_payment_report():
@@ -42,7 +42,7 @@ def get_payment_report():
     except Exception as e:
         return error_response('server_error', 'Failed to fetch payment report.', str(e), 500)
 
-@reports_bp.route('/reports/customers/aging', methods=['GET'])
+@reports_bp.route('/reports/customers/aging/', methods=['GET'])
 @jwt_required()
 @require_permission('reports.view')
 def get_customer_aging_report():
@@ -55,7 +55,7 @@ def get_customer_aging_report():
     except Exception as e:
         return error_response('server_error', 'Failed to fetch customer aging report.', str(e), 500)
 
-@reports_bp.route('/reports/products/top', methods=['GET'])
+@reports_bp.route('/reports/products/top/', methods=['GET'])
 @jwt_required()
 @require_permission('reports.view')
 def get_top_products_report():
@@ -73,7 +73,7 @@ def get_top_products_report():
     except Exception as e:
         return error_response('server_error', 'Failed to fetch top products report.', str(e), 500)
 
-@reports_bp.route('/reports/summary', methods=['GET'])
+@reports_bp.route('/reports/summary/', methods=['GET'])
 @jwt_required()
 @require_permission('reports.view')
 def get_summary_stats():
