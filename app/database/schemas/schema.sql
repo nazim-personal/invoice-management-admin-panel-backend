@@ -199,11 +199,31 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
 
   -- Indexes for faster queries
-  INDEX idx_payments_invoice (invoice_id),
-  INDEX idx_payments_payment_date (payment_date),
+  INDEX idx_payments_invoice_id (invoice_id),
+  INDEX idx_payments_date (payment_date),
   INDEX idx_payments_method (method),
   INDEX idx_payments_reference_no (reference_no),
   INDEX idx_payments_deleted_at (deleted_at)
+);
+
+-- ------------------------------------------------------------------
+-- Table: activity_logs
+-- Purpose: Stores audit logs for system activities.
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS activity_logs (
+  id CHAR(36) PRIMARY KEY,               -- UUID for unique log entry
+  user_id CHAR(36) NOT NULL,             -- User who performed the action
+  action VARCHAR(100) NOT NULL,          -- Action name (e.g., INVOICE_CREATED)
+  entity_type VARCHAR(50) NOT NULL,      -- Entity type (e.g., invoice, customer)
+  entity_id CHAR(36),                    -- ID of the affected entity
+  details JSON,                          -- JSON details about the action
+  ip_address VARCHAR(45),                -- IP address of the user
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp of action
+
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  INDEX idx_activity_user (user_id),
+  INDEX idx_activity_entity (entity_type, entity_id),
+  INDEX idx_activity_created_at (created_at)
 );
 
 -- ------------------------------------------------------------------

@@ -15,6 +15,8 @@ from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
 from app.utils.helpers import validate_request, bulk_action_handler
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.database.models.activity_model import ActivityLog
 
 customers_blueprint = Blueprint('customers', __name__)
 
@@ -59,6 +61,17 @@ def create_customer():
 
         customer_id = Customer.create(validated_data)
         customer = Customer.find_by_id_with_aggregates(customer_id)
+
+        # Log activity
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='CUSTOMER_CREATED',
+            entity_type='customer',
+            entity_id=customer_id,
+            details={'name': customer.name, 'email': customer.email},
+            ip_address=request.remote_addr
+        )
+
         return success_response(customer_summary_schema.dump(customer), message="Customer created successfully.", status=201)
 
     except ValueError as err:
@@ -142,6 +155,17 @@ def update_customer(customer_id: str):
 
         Customer.update_customer(customer_id, validated_data)
         updated_customer = Customer.find_by_id_with_aggregates(customer_id)
+
+        # Log activity
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='CUSTOMER_UPDATED',
+            entity_type='customer',
+            entity_id=customer_id,
+            details=validated_data,
+            ip_address=request.remote_addr
+        )
+
         return success_response(customer_summary_schema.dump(updated_customer), "Customer updated successfully.")
 
     except ValueError as err:

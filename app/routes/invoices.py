@@ -20,6 +20,7 @@ from app.utils.pagination import get_pagination
 from app.utils.utils import calculate_invoice_totals, generate_invoice_number, update_invoice_status
 from app.utils.pdf_generator import InvoicePDFGenerator
 from app.utils.helpers import validate_request, get_or_404, bulk_action_handler
+from app.database.models.activity_model import ActivityLog
 
 
 invoices_blueprint = Blueprint('invoices', __name__)
@@ -168,6 +169,16 @@ def create_invoice():
         if not created_invoice:
             return error_response('not_found', 'Created invoice not found.', 404)
 
+        # Log activity
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='INVOICE_CREATED',
+            entity_type='invoice',
+            entity_id=invoice_id,
+            details={'invoice_number': invoice_data['invoice_number'], 'total': float(total)},
+            ip_address=request.remote_addr
+        )
+
         return success_response(result=created_invoice.to_dict(), status=201)
 
     except Exception as e:
@@ -259,6 +270,16 @@ def update_invoice(invoice_id: str):
                     'reference_no': f'Marked as paid via API'
                 })
 
+                # Log activity
+                ActivityLog.create_log(
+                    user_id=get_jwt_identity(),
+                    action='PAYMENT_RECORDED',
+                    entity_type='invoice',
+                    entity_id=invoice_id,
+                    details={'amount': float(payment_amount), 'method': 'cash'},
+                    ip_address=request.remote_addr
+                )
+
         # --- Update invoice and status ---
         # Remove non-model fields
         validated.pop('items', None)
@@ -287,6 +308,16 @@ def update_invoice(invoice_id: str):
             'items': items,
             'payments': payments
         }
+
+        # Log activity
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='INVOICE_UPDATED',
+            entity_type='invoice',
+            entity_id=invoice_id,
+            details=validated, # Log what changed
+            ip_address=request.remote_addr
+        )
 
         return success_response(result=result, status=200)
 

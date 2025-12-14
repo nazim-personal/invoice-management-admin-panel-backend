@@ -41,6 +41,9 @@ PERMISSIONS = {
 
     # Dashboard permissions
     'dashboard.view': 'View dashboard statistics and analytics',
+
+    # Report permissions
+    'reports.view': 'View system reports',
 }
 
 # Permission categories for UI grouping
@@ -51,4 +54,5 @@ PERMISSION_CATEGORIES = {
     'Payments': ['payments.list', 'payments.view', 'payments.create'],
     'Users': ['users.list', 'users.view', 'users.create', 'users.update', 'users.delete', 'users.permissions'],
     'Dashboard': ['dashboard.view'],
+    'Reports': ['reports.view'],
 }

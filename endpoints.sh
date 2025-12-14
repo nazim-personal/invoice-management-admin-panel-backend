@@ -252,3 +252,47 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_
 # -----------------
 echo "\n### Get Dashboard Stats (Requires Admin Token) ###"
 curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/dashboard/stats/"
+
+
+# -----------------
+# Activities Endpoints
+# -----------------
+echo "\n### Get All Activities (Requires Admin/Manager Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/activities/"
+
+
+echo "\n### Get My Activities (Requires User Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/activities/me/"
+
+
+echo "\n### Get Invoice Activities (Requires User Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/invoices/INVOICE_ID_HERE/activities/"
+
+
+echo "\n### Get Customer Activities (Requires User Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/customers/CUSTOMER_ID_HERE/activities/"
+
+
+# -----------------
+# Reports Endpoints
+# -----------------
+echo "\n### Get Sales Report (Requires Report View Permission) ###"
+# Query Params: start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), period (daily, weekly, monthly, yearly)
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/reports/sales/?period=monthly"
+
+
+echo "\n### Get Payments Report (Requires Report View Permission) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/reports/payments/?period=monthly"
+
+
+echo "\n### Get Customer Aging Report (Requires Report View Permission) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/reports/customers/aging/"
+
+
+echo "\n### Get Top Products Report (Requires Report View Permission) ###"
+# Query Params: limit (default 10)
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/reports/products/top/?limit=5"
+
+
+echo "\n### Get Summary Stats (Requires Report View Permission) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/reports/summary/"

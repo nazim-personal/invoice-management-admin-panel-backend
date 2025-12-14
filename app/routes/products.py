@@ -11,6 +11,8 @@ from app.utils.auth import require_admin, require_permission
 from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
 from app.utils.helpers import validate_request, get_or_404, bulk_action_handler
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.database.models.activity_model import ActivityLog
 
 products_blueprint = Blueprint('products', __name__)
 
@@ -47,6 +49,15 @@ def create_product():
         product_id = Product.create_product(validated_data)
         product = Product.find_by_id(product_id)
         if product:
+            # Log activity
+            ActivityLog.create_log(
+                user_id=get_jwt_identity(),
+                action='PRODUCT_CREATED',
+                entity_type='product',
+                entity_id=product_id,
+                details={'name': product.name, 'code': product.product_code},
+                ip_address=request.remote_addr
+            )
             return success_response(product_schema.dump(product),
                                     message="Product created successfully.", status=201)
         return error_response('server_error', ERROR_MESSAGES["server_error"]["create_product"], status=500)
@@ -94,6 +105,17 @@ def update_product(product_id):
         if not Product.update_product(product_id, validated_data):
             return error_response('not_found', ERROR_MESSAGES["not_found"]["product"], status=404)
         updated_product = Product.find_by_id(product_id)
+
+        # Log activity
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='PRODUCT_UPDATED',
+            entity_type='product',
+            entity_id=product_id,
+            details=validated_data,
+            ip_address=request.remote_addr
+        )
+
         return success_response(product_schema.dump(updated_product), message="Product updated successfully.")
     except ValueError as err:
         return error_response('validation_error', message="Invalid data.", details=err.args[0], status=400)

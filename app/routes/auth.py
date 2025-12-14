@@ -1,13 +1,7 @@
 from flask import Blueprint, request
-from flask_jwt_extended import (
-    create_access_token,
-    create_refresh_token,
-    jwt_required,
-    get_jwt,
-    get_jwt_identity,
-    get_current_user
-)
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
 from app.database.models.user import User
+from app.database.models.activity_model import ActivityLog
 from app.database.token_blocklist import BLOCKLIST
 from app.utils.auth import require_admin
 from app.utils.error_messages import ERROR_MESSAGES
@@ -39,6 +33,15 @@ def sign_in():
         access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
         refresh_token = create_refresh_token(identity=str(user.id), additional_claims=additional_claims)
 
+        # Log activity
+        ActivityLog.create_log(
+            user_id=user.id,
+            action='USER_LOGIN',
+            entity_type='user',
+            entity_id=user.id,
+            ip_address=request.remote_addr
+        )
+
         user_dict = user.to_dict()
         user_dict['permissions'] = user.get_permissions()
 
@@ -60,7 +63,19 @@ def sign_out():
     """
     jti = get_jwt()["jti"]
     BLOCKLIST.add(jti)
-    return success_response(message="Successfully signed out.")
+
+    # Log activity
+    current_user_id = get_jwt_identity()
+    if current_user_id:
+        ActivityLog.create_log(
+            user_id=current_user_id,
+            action='USER_LOGOUT',
+            entity_type='user',
+            entity_id=current_user_id,
+            ip_address=request.remote_addr
+        )
+
+    return success_response(message="Successfully logged out.", status=200)
 
 
 @auth_blueprint.route('/refresh', methods=['POST'])
