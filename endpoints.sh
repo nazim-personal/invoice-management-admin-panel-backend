@@ -248,6 +248,59 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_
 }' "$BASE_URL/invoices/bulk-restore/"
 
 # -----------------
+# Payment Endpoints
+# -----------------
+echo "\n### Get All Payments (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/"
+
+
+echo "\n### Search Payments - General Search (Requires Token) ###"
+# Search by reference_no or method
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/search/?q=UPI"
+
+
+echo "\n### Search Payments - By Method (Requires Token) ###"
+# Filter by payment method: cash, card, upi, bank_transfer
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/search/?method=upi"
+
+
+echo "\n### Search Payments - By Reference Number (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/search/?reference_no=PAY-12345"
+
+
+echo "\n### Search Payments - By Date Range (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/search/?start_date=2024-01-01&end_date=2024-12-31"
+
+
+echo "\n### Search Payments - Combined Filters (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/search/?method=upi&start_date=2024-01-01&end_date=2024-12-31"
+
+
+echo "\n### Get Payment by ID with Customer/Invoice Details (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/payments/PAYMENT_ID_HERE/"
+
+
+echo "\n### Get Payments for Invoice (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/invoices/INVOICE_ID_HERE/payments/"
+
+
+# -----------------
+# PhonePe Payment Gateway Endpoints
+# -----------------
+echo "\n### Initiate PhonePe Payment for Invoice (Requires Token) ###"
+# This will return a payment URL for the customer to complete payment
+curl -X POST -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/invoices/INVOICE_ID_HERE/phonepe-payment/"
+
+
+echo "\n### PhonePe Webhook (Called by PhonePe - No Auth Required) ###"
+# This endpoint is called automatically by PhonePe when payment status changes
+# You don't need to call this manually - it's for PhonePe's servers only
+# Example payload structure (for reference):
+# curl -X POST -H "Content-Type: application/json" -H "X-VERIFY: signature_here" -d '{
+#   "response": "base64_encoded_payment_response"
+# }' "$BASE_URL/webhooks/phonepe/"
+
+# -----------------
 # Dashboard Endpoints
 # -----------------
 echo "\n### Get Dashboard Stats (Requires Admin Token) ###"

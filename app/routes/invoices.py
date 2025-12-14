@@ -427,3 +427,79 @@ def generate_invoice_pdf(invoice_id: str):
 
     except Exception as e:
         return error_response('server_error', 'Error generating invoice PDF.', details=str(e), status=500)
+
+
+@invoices_blueprint.route('/invoices/<string:invoice_id>/phonepe-payment/', methods=['POST'])
+@jwt_required()
+@require_permission('invoices.view')
+def initiate_phonepe_payment(invoice_id):
+    """
+    Initiate PhonePe payment for an invoice.
+    Returns payment URL for customer to complete payment.
+    """
+    try:
+        from app.services.phonepe_service import phonepe_service
+
+        # Get invoice
+        invoice = Invoice.find_by_id(invoice_id)
+        if not invoice:
+            return error_response('not_found', ERROR_MESSAGES["not_found"]["invoice"], status=404)
+
+        # Get customer details
+        customer = Customer.find_by_id(invoice.customer_id)
+        if not customer:
+            return error_response('not_found', 'Customer not found for this invoice', status=404)
+
+        # Calculate remaining amount to be paid
+        total_paid = Payment.get_total_paid(invoice_id)
+        remaining_amount = invoice.total_amount - total_paid
+
+        if remaining_amount <= 0:
+            return error_response(
+                'validation_error',
+                'Invoice is already fully paid',
+                status=400
+            )
+
+        # Initiate PhonePe payment
+        result = phonepe_service.initiate_payment(
+            invoice_id=invoice_id,
+            amount=remaining_amount,
+            customer_phone=customer.phone or '9999999999',  # Fallback phone
+            customer_name=customer.name
+        )
+
+        if result.get('success'):
+            # Log activity
+            ActivityLog.create_log(
+                user_id=get_jwt_identity(),
+                action='PHONEPE_PAYMENT_INITIATED',
+                entity_type='invoice',
+                entity_id=invoice_id,
+                details={
+                    'amount': float(remaining_amount),
+                    'transaction_id': result.get('transaction_id'),
+                    'customer_id': customer.id
+                },
+                ip_address=request.remote_addr
+            )
+
+            return success_response(
+                result={
+                    'payment_url': result.get('payment_url'),
+                    'transaction_id': result.get('transaction_id'),
+                    'amount': float(remaining_amount)
+                },
+                message='PhonePe payment initiated successfully',
+                status=200
+            )
+        else:
+            return error_response(
+                'phonepe_error',
+                result.get('message', 'Failed to initiate PhonePe payment'),
+                details=result.get('error_code'),
+                status=500
+            )
+
+    except Exception as e:
+        return error_response('server_error', 'Error initiating PhonePe payment', details=str(e), status=500)

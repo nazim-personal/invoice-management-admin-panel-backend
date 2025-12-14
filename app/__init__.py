@@ -23,6 +23,7 @@ from .routes.dashboard import dashboard_bp
 from .routes.permissions import permissions_blueprint
 from .routes.activities import activities_bp
 from .routes.reports import reports_bp
+from .routes.webhooks import webhooks_bp
 
 def create_app():
     app = Flask(__name__)
@@ -100,6 +101,7 @@ def create_app():
     app.register_blueprint(permissions_blueprint, url_prefix='/api')
     app.register_blueprint(activities_bp, url_prefix='/api')
     app.register_blueprint(reports_bp, url_prefix='/api')
+    app.register_blueprint(webhooks_bp, url_prefix='/api')
 
     # A simple health check route
     @app.route("/api/health")

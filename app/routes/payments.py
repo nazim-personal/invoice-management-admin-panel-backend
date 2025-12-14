@@ -4,7 +4,7 @@ from marshmallow import ValidationError
 
 from app.database.models.invoice import Invoice
 from app.database.models.payment import Payment
-from app.schemas.payment_schema import PaymentSchema
+from app.schemas.payment_schema import PaymentSchema, PaymentDetailSchema
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
@@ -17,22 +17,38 @@ payments_blueprint = Blueprint('payments', __name__)
 # Instantiate schema
 payment_schema = PaymentSchema()
 
-@payments_blueprint.route('/payments/search', methods=['GET'])
+@payments_blueprint.route('/payments/search/', methods=['GET'])
 @jwt_required()
 def search_payments():
+    """Search payments with multiple filters."""
     search_term = request.args.get('q')
-    if not search_term:
-        return error_response(error_code='validation_error', message="Search term 'q' is required.", status=400)
+    method = request.args.get('method')
+    reference_no = request.args.get('reference_no')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    page, per_page = get_pagination()
 
     try:
-        payments = Payment.search(search_term)
+        payments, total = Payment.search_payments(
+            search_term=search_term,
+            method=method,
+            reference_no=reference_no,
+            start_date=start_date,
+            end_date=end_date,
+            page=page,
+            per_page=per_page
+        )
         serialized_payments = payment_schema.dump(payments, many=True)
-        return success_response(serialized_payments, message="Payments matching the search term retrieved successfully.")
+        return success_response(
+            serialized_payments,
+            message="Payments retrieved successfully.",
+            meta={'total': total, 'page': page, 'per_page': per_page}
+        )
     except Exception as e:
         return error_response(error_code='server_error', message="An error occurred during the search.", details=str(e), status=500)
 
 
-@payments_blueprint.route('/invoices/<string:invoice_id>/pay', methods=['POST'])
+@payments_blueprint.route('/invoices/<string:invoice_id>/pay/', methods=['POST'])
 @jwt_required()
 @require_permission('payments.create')
 def record_payment(invoice_id):
@@ -62,7 +78,7 @@ def record_payment(invoice_id):
         return error_response(error_code='server_error', message="An error occurred while recording the payment.", details=str(e), status=500)
 
 
-@payments_blueprint.route('/payments', methods=['GET'])
+@payments_blueprint.route('/payments/', methods=['GET'])
 @jwt_required()
 @require_permission('payments.list')
 def get_all_payments():
@@ -78,7 +94,7 @@ def get_all_payments():
     except Exception as e:
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_payment"], details=str(e), status=500)
 
-@payments_blueprint.route('/invoices/<string:invoice_id>/payments', methods=['GET'])
+@payments_blueprint.route('/invoices/<string:invoice_id>/payments/', methods=['GET'])
 @jwt_required()
 @require_permission('payments.view')
 def get_payments_for_invoice(invoice_id):
@@ -101,14 +117,16 @@ def get_payments_for_invoice(invoice_id):
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_payment"], details=str(e), status=500)
 
 
-@payments_blueprint.route('/payments/<int:payment_id>', methods=['GET'])
+@payments_blueprint.route('/payments/<string:payment_id>/', methods=['GET'])
 @jwt_required()
 @require_permission('payments.view')
 def get_payment(payment_id):
+    """Get payment with customer and invoice details."""
     try:
-        payment = Payment.find_by_id(payment_id)
-        if payment:
-            return success_response(payment_schema.dump(payment), message="Payment retrieved successfully.")
+        payment_detail_schema = PaymentDetailSchema()
+        payment_data = Payment.get_payment_with_details(payment_id)
+        if payment_data:
+            return success_response(payment_detail_schema.dump(payment_data), message="Payment retrieved successfully.")
         return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["payment"], status=404)
     except Exception as e:
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_payment"], details=str(e), status=500)

@@ -40,3 +40,23 @@ class PaymentSchema(Schema):
     )
     reference_no = fields.Str(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
+
+
+# Schema for payment with customer and invoice details
+class PaymentDetailSchema(Schema):
+    id = fields.Str()
+    invoice_id = fields.Str()
+    amount = fields.Decimal(places=2, as_string=True)
+    payment_date = fields.Date()
+    method = fields.Str()
+    reference_no = fields.Str(allow_none=True)
+    created_at = fields.DateTime()
+
+    # Invoice details
+    invoice_number = fields.Str()
+    invoice_total = fields.Decimal(places=2, as_string=True)
+
+    # Customer details
+    customer_id = fields.Str()
+    customer_name = fields.Str()
+    customer_email = fields.Str()
