@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, pre_dump
 from datetime import date
 
 # Schema for validating an initial payment made during invoice creation.
@@ -40,6 +40,40 @@ class PaymentSchema(Schema):
     )
     reference_no = fields.Str(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
+
+    # Nested fields for list view
+    invoice = fields.Nested(Schema.from_dict({"invoice_number": fields.Str()}), dump_only=True)
+    customer = fields.Nested(Schema.from_dict({"name": fields.Str(), "email": fields.Str()}), dump_only=True)
+
+    @pre_dump
+    def process_data(self, data, **kwargs):
+        # If data is a dictionary (from search_payments), return as is
+        if isinstance(data, dict):
+            return data
+
+        # If data is an object, construct the dictionary with nested fields
+        result = {
+            'id': data.id,
+            'invoice_id': data.invoice_id,
+            'amount': data.amount,
+            'payment_date': data.payment_date,
+            'method': data.method,
+            'reference_no': data.reference_no,
+            'created_at': data.created_at
+        }
+
+        # Add nested invoice data if available
+        if hasattr(data, 'invoice_number'):
+            result['invoice'] = {'invoice_number': data.invoice_number}
+
+        # Add nested customer data if available
+        if hasattr(data, 'customer_name'):
+            result['customer'] = {
+                'name': data.customer_name,
+                'email': data.customer_email
+            }
+
+        return result
 
 
 # Schema for payment with customer and invoice details

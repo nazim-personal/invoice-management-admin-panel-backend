@@ -380,33 +380,33 @@ def generate_invoice_pdf(invoice_id: str):
         # Format invoice data for PDF
         invoice_data = {
             'invoice_number': invoice.invoice_number,
-            'invoice_date': invoice.invoice_date.strftime('%b %d, %Y') if invoice.invoice_date else 'N/A',
+            'invoice_date': (getattr(invoice, 'invoice_date', None) or invoice.created_at).strftime('%b %d, %Y') if (getattr(invoice, 'invoice_date', None) or invoice.created_at) else 'N/A',
             'due_date': invoice.due_date.strftime('%b %d, %Y') if invoice.due_date else 'N/A',
             'status': invoice.status,
             'payment_terms': getattr(invoice, 'payment_terms', '30'),
             'notes': getattr(invoice, 'notes', 'Thank you for your business!'),  # Dynamic notes
             'customer': {
-                'name': customer.name or 'N/A',
-                'address': customer.address or '',
-                'city': customer.city or '',
-                'state': customer.state or '',
-                'gst_number': customer.gst_number or 'N/A'
+                'name': getattr(customer, 'name', 'N/A'),
+                'address': getattr(customer, 'address', ''),
+                'city': getattr(customer, 'city', ''),
+                'state': getattr(customer, 'state', ''),
+                'gst_number': getattr(customer, 'gst_number', 'N/A')
             },
             'items': [],
-            'subtotal': float(invoice.subtotal) if invoice.subtotal else 0.0,
+            'subtotal': float(invoice.subtotal_amount) if invoice.subtotal_amount else 0.0,
             'tax_amount': float(invoice.tax_amount) if invoice.tax_amount else 0.0,
-            'total': float(invoice.total) if invoice.total else 0.0
+            'total': float(invoice.total_amount) if invoice.total_amount else 0.0
         }
 
         # Add items with product details
         for item in items:
             product = Product.find_by_id(item.product_id)
             invoice_data['items'].append({
-                'product_name': product.name if product else 'Unknown Product',
+                'product_name': getattr(item, 'product_name', None) or (product.name if product else 'Unknown Product'),
                 'quantity': item.quantity,
-                'price': float(item.unit_price) if item.unit_price else 0.0,
-                'tax_rate': float(item.tax_rate) if item.tax_rate else 0.0,
-                'total': float(item.total_price) if item.total_price else 0.0
+                'price': float(item.price) if getattr(item, 'price', None) else 0.0,
+                'tax_rate': 0.0,
+                'total': float(item.total) if getattr(item, 'total', None) else 0.0
             })
 
         # Get current user for company details
@@ -452,7 +452,7 @@ def initiate_phonepe_payment(invoice_id):
 
         # Calculate remaining amount to be paid
         total_paid = Payment.get_total_paid(invoice_id)
-        remaining_amount = invoice.total_amount - total_paid
+        remaining_amount = Decimal(invoice.total_amount) - total_paid
 
         if remaining_amount <= 0:
             return error_response(

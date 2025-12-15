@@ -1,17 +1,27 @@
 from .base_model import BaseModel
 from app.database.db_manager import DBManager
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime
 from app.database.models.invoice import Invoice
 
 class Payment(BaseModel):
     _table_name = 'payments'
 
     def __init__(self, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
         for key, value in kwargs.items():
             if key == 'amount' and value is not None:
                 value = Decimal(value)
+            elif key == 'payment_date' and isinstance(value, str):
+                try:
+                    value = date.fromisoformat(value)
+                except ValueError:
+                    pass
+            elif key == 'created_at' and isinstance(value, str):
+                try:
+                    value = datetime.fromisoformat(value)
+                except ValueError:
+                    pass
             setattr(self, key, value)
 
     def to_dict(self):
@@ -53,13 +63,34 @@ class Payment(BaseModel):
         return cls.from_row(row) if row else None
 
     @classmethod
+    def find_with_pagination_and_count(cls, page=1, per_page=10):
+        offset = (page - 1) * per_page
+        query = f"""
+            SELECT p.*, i.invoice_number, c.name as customer_name, c.email as customer_email
+            FROM {cls._table_name} p
+            JOIN invoices i ON p.invoice_id = i.id
+            JOIN customers c ON i.customer_id = c.id
+            WHERE p.deleted_at IS NULL
+            ORDER BY p.payment_date DESC
+            LIMIT %s OFFSET %s
+        """
+        rows = DBManager.execute_query(query, (per_page, offset), fetch='all')
+        items = [cls.from_row(row) for row in rows] if rows else []
+
+        count_query = f"SELECT COUNT(*) as total FROM {cls._table_name} WHERE deleted_at IS NULL"
+        count_result = DBManager.execute_query(count_query, fetch='one')
+        total = count_result['total'] if count_result else 0
+
+        return items, total
+
+    @classmethod
     def find_by_invoice_id_with_pagination_and_count(cls, invoice_id, page=1, per_page=10):
         offset = (page - 1) * per_page
-        query = f"SELECT * FROM {cls._table_name} WHERE invoice_id = %s ORDER BY payment_date DESC LIMIT %s OFFSET %s"
+        query = f"SELECT * FROM {cls._table_name} WHERE invoice_id = %s AND deleted_at IS NULL ORDER BY payment_date DESC LIMIT %s OFFSET %s"
         rows = DBManager.execute_query(query, (invoice_id, per_page, offset), fetch='all')
         items = [cls.from_row(row) for row in rows] if rows else []
 
-        count_query = f"SELECT COUNT(*) as total FROM {cls._table_name} WHERE invoice_id = %s"
+        count_query = f"SELECT COUNT(*) as total FROM {cls._table_name} WHERE invoice_id = %s AND deleted_at IS NULL"
         count_result = DBManager.execute_query(count_query, (invoice_id,), fetch='one')
         total = count_result['total'] if count_result else 0
 

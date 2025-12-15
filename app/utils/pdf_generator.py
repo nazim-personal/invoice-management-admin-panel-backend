@@ -29,7 +29,7 @@ class InvoicePDFGenerator:
             self.company_phone = user.company_phone or os.getenv('COMPANY_PHONE', '+91 1234567890')
             self.company_email = user.company_email or os.getenv('COMPANY_EMAIL', 'info@company.com')
             self.company_gst = user.company_gst or os.getenv('COMPANY_GST', 'GST: 12ABCDE1234F1Z5')
-            self.currency_symbol = user.currency_symbol or os.getenv('CURRENCY_SYMBOL', '₹')
+            self.currency_symbol = user.currency_symbol or os.getenv('CURRENCY_SYMBOL', 'Rs.')
         else:
             self.company_name = os.getenv('COMPANY_NAME', 'Your Company Name')
             self.company_address = os.getenv('COMPANY_ADDRESS', 'Company Address Line 1')
@@ -37,7 +37,7 @@ class InvoicePDFGenerator:
             self.company_phone = os.getenv('COMPANY_PHONE', '+91 1234567890')
             self.company_email = os.getenv('COMPANY_EMAIL', 'info@company.com')
             self.company_gst = os.getenv('COMPANY_GST', 'GST: 12ABCDE1234F1Z5')
-            self.currency_symbol = os.getenv('CURRENCY_SYMBOL', '₹')
+            self.currency_symbol = os.getenv('CURRENCY_SYMBOL', 'Rs.')
 
         self.upi_id = os.getenv('UPI_ID', 'company@upi')
 
