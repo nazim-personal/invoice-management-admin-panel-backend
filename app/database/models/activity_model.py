@@ -68,8 +68,10 @@ class ActivityLog(BaseModel):
             params.append(entity_type)
 
         if entity_id:
-            where.append("entity_id = %s")
+            # Match entity_id OR find it in details (for bulk actions where entity_id is NULL)
+            where.append("(entity_id = %s OR (entity_id IS NULL AND details LIKE %s))")
             params.append(entity_id)
+            params.append(f'%{entity_id}%')
 
         where_sql = " WHERE " + " AND ".join(where) if where else ""
 

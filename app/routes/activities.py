@@ -111,3 +111,30 @@ def list_customer_activities(customer_id):
         )
     except Exception as e:
         return error_response('server_error', 'Failed to fetch customer activities.', str(e), 500)
+
+
+@activities_bp.route('/products/<string:product_id>/activities/', methods=['GET'])
+@jwt_required()
+@require_permission('products.view')
+def list_product_activities(product_id):
+    """
+    List activities for a specific product.
+    """
+    try:
+        page, per_page = get_pagination()
+        offset = (page - 1) * per_page
+
+        logs, total = ActivityLog.list_logs(entity_type='product', entity_id=product_id, limit=per_page, offset=offset)
+
+        result = []
+        for log in logs:
+            data = log.to_dict()
+            data['user_name'] = getattr(log, 'user_name', 'Unknown')
+            result.append(data)
+
+        return success_response(
+            result=result,
+            meta={'total': total, 'page': page, 'per_page': per_page}
+        )
+    except Exception as e:
+        return error_response('server_error', 'Failed to fetch product activities.', str(e), 500)

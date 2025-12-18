@@ -263,7 +263,9 @@ def update_invoice(invoice_id: str):
             paid_amount = Payment.get_total_paid(invoice_id)
             remaining_balance = total_amount - paid_amount
 
-            payment_amount = Decimal(validated.get('amount_paid') or remaining_balance)
+            # When marking as paid, strictly pay the remaining balance
+            # Ignore amount_paid from request as it might be the full total
+            payment_amount = remaining_balance
 
             if payment_amount > 0:
                 Payment.record_payment({

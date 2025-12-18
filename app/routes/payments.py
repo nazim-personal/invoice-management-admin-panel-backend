@@ -76,8 +76,8 @@ def record_payment(invoice_id):
             ActivityLog.create_log(
                 user_id=get_jwt_identity(),
                 action='PAYMENT_RECORDED',
-                entity_type='payment',
-                entity_id=payment_id,
+                entity_type='invoice',
+                entity_id=invoice_id,
                 details={
                     'invoice_id': invoice_id,
                     'invoice_number': invoice.invoice_number,
