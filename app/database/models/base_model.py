@@ -148,12 +148,20 @@ class BaseModel:
         return cls._bulk_update(ids, {"deleted_at": None, "updated_at": datetime.now(timezone.utc)}, condition_deleted=False)
 
     @classmethod
-    def find_with_pagination_and_count(cls: Type[T], page: int = 1, per_page: int = 10, include_deleted: bool = False) -> Tuple[List[T], int]:
+    def find_with_pagination_and_count(cls: Type[T], page: int = 1, per_page: int = 10, include_deleted: bool = False, deleted_only: bool = False) -> Tuple[List[T], int]:
         offset = (page - 1) * per_page
-        results: List[Dict[str, Any]] = DBManager.execute_query(f"{cls._get_base_query(include_deleted)} LIMIT %s OFFSET %s", (per_page, offset), fetch='all') or []
+
+        # Build query based on deleted_only flag
+        if deleted_only:
+            base_query = f"SELECT * FROM {cls._table_name} WHERE deleted_at IS NOT NULL"
+            count_query = f"SELECT COUNT(*) AS count FROM {cls._table_name} WHERE deleted_at IS NOT NULL"
+        else:
+            base_query = cls._get_base_query(include_deleted)
+            count_query = f"SELECT COUNT(*) AS count FROM {cls._table_name}" + ("" if include_deleted else " WHERE deleted_at IS NULL")
+
+        results: List[Dict[str, Any]] = DBManager.execute_query(f"{base_query} LIMIT %s OFFSET %s", (per_page, offset), fetch='all') or []
         items = [cls.from_row(r) for r in results if r]
 
-        count_query = f"SELECT COUNT(*) AS count FROM {cls._table_name}" + ("" if include_deleted else " WHERE deleted_at IS NULL")
         total = int((DBManager.execute_query(count_query, fetch='one') or {}).get("count", 0))
         return items, total
 

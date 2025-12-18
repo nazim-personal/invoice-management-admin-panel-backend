@@ -114,6 +114,33 @@ curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_A
 echo "\n### Soft-Delete a User (Requires Admin Token) ###"
 curl -X DELETE -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/users/2/"
 
+echo "\n### Get Only Deleted Users (Requires Admin Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" "$BASE_URL/users/?deleted=true"
+
+echo "\n### Update User Profile (Requires User Token) ###"
+curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" -d '{
+    "name": "Updated Name",
+    "phone": "+1234567890"
+}' "$BASE_URL/users/profile/"
+
+echo "\n### Change Password (Requires User Token) ###"
+curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" -d '{
+    "old_password": "current_password",
+    "new_password": "new_password123"
+}' "$BASE_URL/users/password/"
+
+echo "\n### Get Billing Information (Requires User Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/users/billing/"
+
+echo "\n### Update Billing Information (Requires User Token) ###"
+curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" -d '{
+    "billing_address": "123 Main St",
+    "billing_city": "New York",
+    "billing_state": "NY",
+    "billing_pin": "10001",
+    "billing_gst": "GST123456"
+}' "$BASE_URL/users/billing/"
+
 # -----------------
 # Customers Endpoints
 # -----------------
@@ -145,6 +172,14 @@ echo "\n### Bulk Delete Customers (Requires Admin Token) ###"
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
     "ids": [1, 2]
 }' "$BASE_URL/customers/bulk-delete/"
+
+echo "\n### Get Only Deleted Customers (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/customers/?deleted=true"
+
+echo "\n### Bulk Restore Customers (Requires Admin Token) ###"
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
+    "ids": [1, 2]
+}' "$BASE_URL/customers/bulk-restore/"
 
 
 # -----------------
@@ -179,6 +214,14 @@ echo "\n### Bulk Delete Products (Requires Admin Token) ###"
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
     "ids": [1, 2]
 }' "$BASE_URL/products/bulk-delete/"
+
+echo "\n### Get Only Deleted Products (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/products/?deleted=true"
+
+echo "\n### Bulk Restore Products (Requires Admin Token) ###"
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
+    "ids": [1, 2]
+}' "$BASE_URL/products/bulk-restore/"
 
 
 # -----------------
@@ -246,6 +289,9 @@ echo "\n### Bulk Restore Invoices (Requires Admin Token) ###"
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" -d '{
     "ids": [1, 2]
 }' "$BASE_URL/invoices/bulk-restore/"
+
+echo "\n### Get Only Deleted Invoices (Requires Token) ###"
+curl -X GET -H "Authorization: Bearer YOUR_USER_TOKEN_HERE" "$BASE_URL/invoices/?deleted=true"
 
 # -----------------
 # Payment Endpoints

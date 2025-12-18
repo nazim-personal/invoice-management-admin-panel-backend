@@ -94,9 +94,11 @@ class Invoice(BaseModel):
         return cls.from_row(row)
 
     @classmethod
-    def list_all(cls, customer_id=None, status=None, offset=0, limit=10, q=None, include_deleted=False):
+    def list_all(cls, customer_id=None, status=None, offset=0, limit=10, q=None, include_deleted=False, deleted_only=False):
         where = []
-        if not include_deleted:
+        if deleted_only:
+            where.append("i.deleted_at IS NOT NULL")
+        elif not include_deleted:
             where.append("i.deleted_at IS NULL")
 
         params = []

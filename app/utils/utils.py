@@ -98,6 +98,9 @@ def update_invoice_status(invoice_id, total_amount):
     payments = Payment.find_by_invoice_id(invoice_id)
     total_paid = sum((p.amount or 0) for p in payments if p)
 
+    # Ensure total_amount is Decimal for comparison
+    total_amount = Decimal(str(total_amount))
+
     if total_paid >= total_amount:
         status = 'Paid'
     elif total_paid > 0:
@@ -107,4 +110,5 @@ def update_invoice_status(invoice_id, total_amount):
 
     Invoice.update(invoice_id, {'status': status})
     return status
+
 

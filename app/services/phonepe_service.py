@@ -17,8 +17,10 @@ class PhonePeService:
         self.redirect_url = os.getenv('PHONEPE_REDIRECT_URL', 'http://localhost:3000/payment/success')
         self.callback_url = os.getenv('PHONEPE_CALLBACK_URL')
 
+    def _check_credentials(self):
+        """Check if PhonePe credentials are configured."""
         if not all([self.merchant_id, self.salt_key, self.callback_url]):
-            raise ValueError("PhonePe credentials not configured. Check environment variables.")
+            raise ValueError("PhonePe credentials not configured. Please set PHONEPE_MERCHANT_ID, PHONEPE_SALT_KEY, and PHONEPE_CALLBACK_URL environment variables.")
 
     def generate_signature(self, payload: str) -> str:
         """
@@ -61,6 +63,16 @@ class PhonePeService:
         Returns:
             Dict containing payment URL and transaction ID
         """
+        # Check if credentials are configured
+        try:
+            self._check_credentials()
+        except ValueError as e:
+            return {
+                'success': False,
+                'message': str(e),
+                'error_code': 'KEY_NOT_CONFIGURED'
+            }
+
         # Convert amount to paise (PhonePe uses paise)
         amount_in_paise = int(amount * 100)
 
@@ -145,6 +157,16 @@ class PhonePeService:
         Returns:
             Dict containing payment status and details
         """
+        # Check if credentials are configured
+        try:
+            self._check_credentials()
+        except ValueError as e:
+            return {
+                'success': False,
+                'message': str(e),
+                'error_code': 'KEY_NOT_CONFIGURED'
+            }
+
         # Generate signature for status check
         string_to_hash = f"/pg/v1/status/{self.merchant_id}/{merchant_transaction_id}{self.salt_key}"
         sha256_hash = hashlib.sha256(string_to_hash.encode()).hexdigest()

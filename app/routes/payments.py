@@ -1,9 +1,10 @@
 from flask import Blueprint, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from app.database.models.invoice import Invoice
 from app.database.models.payment import Payment
+from app.database.models.activity_model import ActivityLog
 from app.schemas.payment_schema import PaymentSchema, PaymentDetailSchema
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
@@ -70,6 +71,22 @@ def record_payment(invoice_id):
         if payment_id:
             # Update invoice status based on new total paid
             update_invoice_status(invoice_id, invoice.total_amount)
+
+            # Log activity
+            ActivityLog.create_log(
+                user_id=get_jwt_identity(),
+                action='PAYMENT_RECORDED',
+                entity_type='payment',
+                entity_id=payment_id,
+                details={
+                    'invoice_id': invoice_id,
+                    'invoice_number': invoice.invoice_number,
+                    'amount': float(validated_data['amount']),
+                    'method': validated_data['method'],
+                    'reference_no': validated_data.get('reference_no')
+                },
+                ip_address=request.remote_addr
+            )
 
             new_payment = Payment.find_by_id(payment_id)
             return success_response(payment_schema.dump(new_payment), message="Payment recorded successfully.", status=201)

@@ -33,6 +33,7 @@ invoices_blueprint = Blueprint('invoices', __name__)
 def list_invoices():
     try:
         page, per_page = get_pagination()
+        deleted = request.args.get('deleted', 'false').lower() == 'true'
         filters = {
             'status': request.args.get('status'),
             'customer_id': request.args.get('customer_id'),
@@ -45,12 +46,15 @@ def list_invoices():
             status=filters['status'],
             q=filters['q'],
             offset=offset,
-            limit=per_page
+            limit=per_page,
+            deleted_only=deleted
         )
 
+        message = "Deleted invoices retrieved successfully" if deleted else "Invoices retrieved successfully"
         return success_response(
             result = [inv.to_dict() for inv in invoices if inv is not None],
             meta={'total': total, 'page': page, 'per_page': per_page},
+            message=message,
             status=200
         )
 
@@ -280,6 +284,26 @@ def update_invoice(invoice_id: str):
                     ip_address=request.remote_addr
                 )
 
+        # --- Log activity before modifying validated dict ---
+        # Prepare activity details
+        activity_details = {}
+        if 'items' in validated:
+            activity_details['items_updated'] = True
+            activity_details['item_count'] = len(validated['items'])
+        if 'discount_amount' in validated:
+            activity_details['discount_amount'] = float(validated.get('discount_amount', 0))
+        if 'tax_percent' in validated:
+            activity_details['tax_percent'] = float(validated.get('tax_percent', 0))
+        if 'due_date' in validated:
+            activity_details['due_date'] = str(validated['due_date'])
+        if 'is_mark_as_paid' in validated:
+            activity_details['marked_as_paid'] = True
+
+        # Add any other fields that were updated
+        for key in validated.keys():
+            if key not in ['items', 'is_mark_as_paid', 'amount_paid', 'subtotal_amount', 'tax_amount', 'total_amount']:
+                activity_details[key] = validated[key]
+
         # --- Update invoice and status ---
         # Remove non-model fields
         validated.pop('items', None)
@@ -290,6 +314,16 @@ def update_invoice(invoice_id: str):
             Invoice.update(invoice_id, validated)
 
         update_invoice_status(invoice_id, total)
+
+        # Log activity
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='INVOICE_UPDATED',
+            entity_type='invoice',
+            entity_id=invoice_id,
+            details=activity_details,
+            ip_address=request.remote_addr
+        )
 
         # --- Fetch updated data safely ---
         updated_invoice = Invoice.find_by_id(invoice_id)
@@ -309,16 +343,6 @@ def update_invoice(invoice_id: str):
             'payments': payments
         }
 
-        # Log activity
-        ActivityLog.create_log(
-            user_id=get_jwt_identity(),
-            action='INVOICE_UPDATED',
-            entity_type='invoice',
-            entity_id=invoice_id,
-            details=validated, # Log what changed
-            ip_address=request.remote_addr
-        )
-
         return success_response(result=result, status=200)
 
     except Exception as e:
@@ -336,7 +360,20 @@ def restore_invoices():
     if not ids_to_restore or not isinstance(ids_to_restore, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    return bulk_action_handler(ids_to_restore, Invoice.bulk_restore, "{count} invoice(s) restored successfully.", "No matching invoices found for the provided IDs.")
+    result = bulk_action_handler(ids_to_restore, Invoice.bulk_restore, "{count} invoice(s) restored successfully.", "No matching invoices found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='INVOICES_BULK_RESTORED',
+            entity_type='invoice',
+            entity_id=None,
+            details={'invoice_ids': ids_to_restore, 'count': len(ids_to_restore)},
+            ip_address=request.remote_addr
+        )
+
+    return result
 
 
 # ---------------- Bulk Delete ----------------
@@ -350,7 +387,20 @@ def bulk_delete_invoices():
     if not ids_to_delete or not isinstance(ids_to_delete, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    return bulk_action_handler(ids_to_delete, Invoice.bulk_soft_delete, "{count} invoice(s) soft-deleted successfully.", "No matching invoices found for the provided IDs.")
+    result = bulk_action_handler(ids_to_delete, Invoice.bulk_soft_delete, "{count} invoice(s) soft-deleted successfully.", "No matching invoices found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='INVOICES_BULK_DELETED',
+            entity_type='invoice',
+            entity_id=None,
+            details={'invoice_ids': ids_to_delete, 'count': len(ids_to_delete)},
+            ip_address=request.remote_addr
+        )
+
+    return result
 
 
 # ---------------- PDF Generation ----------------

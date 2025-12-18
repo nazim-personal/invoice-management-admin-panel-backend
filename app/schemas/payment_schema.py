@@ -21,10 +21,7 @@ class InitialPaymentSchema(Schema):
 # Schema for validating a payment record against an existing invoice.
 class PaymentSchema(Schema):
     id = fields.Str(dump_only=True)
-    invoice_id = fields.Str(
-        required=True,
-        validate=validate.Range(min=1, error="Invoice ID must be a positive integer.")
-    )
+    invoice_id = fields.Str(dump_only=True)  # Only for serialization, not required on load
     amount = fields.Decimal(
         places=2,
         as_string=True,

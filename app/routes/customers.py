@@ -91,7 +91,7 @@ def get_customers():
     page, per_page = get_pagination()
     q = request.args.get('q')
     status = request.args.get('status')
-    include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
+    deleted = request.args.get('deleted', 'false').lower() == 'true'
 
     try:
         customers, total = Customer.list_all(
@@ -99,11 +99,12 @@ def get_customers():
             status=status,
             offset=(page - 1) * per_page,
             limit=per_page,
-            include_deleted=include_deleted
+            deleted_only=deleted
         )
+        message = "Deleted customers retrieved successfully" if deleted else "Customers retrieved successfully"
         return success_response(
             customer_summary_schema.dump(customers, many=True),
-            "Customers retrieved successfully.",
+            message,
             meta={'total': total, 'page': page, 'per_page': per_page}
         )
     except Exception as e:
@@ -185,7 +186,20 @@ def restore_customer():
     if not ids_to_restore or not isinstance(ids_to_restore, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    return bulk_action_handler(ids_to_restore, Customer.bulk_restore, "{count} customer(s) restored successfully.", "No matching customers found for the provided IDs.")
+    result = bulk_action_handler(ids_to_restore, Customer.bulk_restore, "{count} customer(s) restored successfully.", "No matching customers found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='CUSTOMERS_BULK_RESTORED',
+            entity_type='customer',
+            entity_id=None,
+            details={'customer_ids': ids_to_restore, 'count': len(ids_to_restore)},
+            ip_address=request.remote_addr
+        )
+
+    return result
 
 
 # ---------------- Bulk Delete ----------------
@@ -199,4 +213,17 @@ def bulk_delete_customers():
     if not ids_to_delete or not isinstance(ids_to_delete, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
-    return bulk_action_handler(ids_to_delete, Customer.bulk_soft_delete, "{count} customer(s) soft-deleted successfully.", "No matching customers found for the provided IDs.")
+    result = bulk_action_handler(ids_to_delete, Customer.bulk_soft_delete, "{count} customer(s) soft-deleted successfully.", "No matching customers found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='CUSTOMERS_BULK_DELETED',
+            entity_type='customer',
+            entity_id=None,
+            details={'customer_ids': ids_to_delete, 'count': len(ids_to_delete)},
+            ip_address=request.remote_addr
+        )
+
+    return result

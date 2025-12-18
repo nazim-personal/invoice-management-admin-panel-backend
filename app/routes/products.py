@@ -40,6 +40,21 @@ def search_products():
         return error_response('server_error', "Error occurred during search.", details=str(e), status=500)
 
 
+@products_blueprint.route('/products/deleted', methods=['GET'])
+@jwt_required()
+@require_permission('products.list')
+def get_deleted_products():
+    """Get only soft-deleted products."""
+    page, per_page = get_pagination()
+    try:
+        products, total = Product.find_with_pagination_and_count(page=page, per_page=per_page, include_deleted=True, deleted_only=True)
+        return success_response(product_schema.dump(products, many=True),
+                                meta={'total': total, 'page': page, 'per_page': per_page},
+                                message="Deleted products retrieved successfully.")
+    except Exception as e:
+        return error_response('server_error', "Failed to fetch deleted products.", details=str(e), status=500)
+
+
 @products_blueprint.route('/products', methods=['POST'])
 @jwt_required()
 @require_permission('products.create')
@@ -72,12 +87,13 @@ def create_product():
 @require_permission('products.list')
 def get_products():
     page, per_page = get_pagination()
-    include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
+    deleted = request.args.get('deleted', 'false').lower() == 'true'
     try:
-        products, total = Product.find_with_pagination_and_count(page=page, per_page=per_page, include_deleted=include_deleted)
+        products, total = Product.find_with_pagination_and_count(page=page, per_page=per_page, deleted_only=deleted)
+        message = "Deleted products retrieved successfully" if deleted else "Products retrieved successfully"
         return success_response(product_schema.dump(products, many=True),
                                 meta={'total': total, 'page': page, 'per_page': per_page},
-                                message="Products retrieved successfully.")
+                                message=message)
     except Exception as e:
         return error_response('server_error', ERROR_MESSAGES["server_error"]["fetch_product"], details=str(e), status=500)
 
@@ -131,7 +147,20 @@ def update_product(product_id):
 def bulk_restore_products():
     data = request.get_json() or {}
     ids = data.get('ids', [])
-    return bulk_action_handler(ids, Product.bulk_restore, "{count} product(s) restored successfully", "No matching product found for the provided IDs.")
+    result = bulk_action_handler(ids, Product.bulk_restore, "{count} product(s) restored successfully", "No matching product found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='PRODUCTS_BULK_RESTORED',
+            entity_type='product',
+            entity_id=None,
+            details={'product_ids': ids, 'count': len(ids)},
+            ip_address=request.remote_addr
+        )
+
+    return result
 
 
 @products_blueprint.route('/products/bulk-delete', methods=['POST'])
@@ -140,4 +169,17 @@ def bulk_restore_products():
 def bulk_delete_products():
     data = request.get_json() or {}
     ids = data.get('ids', [])
-    return bulk_action_handler(ids, Product.bulk_soft_delete, "{count} product(s) soft-deleted successfully", "No matching products found for the provided IDs.")
+    result = bulk_action_handler(ids, Product.bulk_soft_delete, "{count} product(s) soft-deleted successfully", "No matching products found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='PRODUCTS_BULK_DELETED',
+            entity_type='product',
+            entity_id=None,
+            details={'product_ids': ids, 'count': len(ids)},
+            ip_address=request.remote_addr
+        )
+
+    return result

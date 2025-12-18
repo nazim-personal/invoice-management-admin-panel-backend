@@ -100,7 +100,7 @@ class Customer(BaseModel):
             return None
 
         invoices_query = """
-            SELECT 
+            SELECT
                 i.id, i.invoice_number, i.due_date, i.total_amount, i.created_at, i.status,
                 (i.total_amount - COALESCE(SUM(p.amount), 0)) as due_amount
             FROM invoices i
@@ -152,13 +152,16 @@ class Customer(BaseModel):
         offset: int = 0,
         limit: int = 20,
         customer_id: Optional[str] = None,
-        include_deleted: bool = False
+        include_deleted: bool = False,
+        deleted_only: bool = False
     ) -> Tuple[List["Customer"], int]:
 
         where: List[str] = []
         params: List[Any] = []
 
-        if not include_deleted:
+        if deleted_only:
+            where.append("c.deleted_at IS NOT NULL")
+        elif not include_deleted:
             where.append("c.deleted_at IS NULL")
         if customer_id:
             where.append("c.id = %s")
@@ -171,7 +174,7 @@ class Customer(BaseModel):
         where_sql = f" WHERE {' AND '.join(where)}" if where else ""
 
         base_query = f"""
-            SELECT 
+            SELECT
                 c.id, c.name, c.email, c.phone, c.address, c.gst_number, c.created_at, c.updated_at,
                 CASE
                     WHEN SUM(CASE WHEN i.status = 'Overdue' THEN 1 ELSE 0 END) > 0 THEN 'Overdue'
