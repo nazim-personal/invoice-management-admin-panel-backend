@@ -299,7 +299,7 @@ def update_invoice(invoice_id: str):
             if payment_amount > 0:
                 Payment.record_payment({
                     'invoice_id': invoice_id,
-                    'amount': payment_amount,
+                    'amount': Decimal(str(payment_amount)),
                     'payment_date': date.today(),
                     'method': 'cash', # Default to cash if not specified
                     'reference_no': f'Marked as paid via API'
@@ -317,8 +317,8 @@ def update_invoice(invoice_id: str):
 
                 # Send email notification
                 payment_data = {
-                    'amount': payment_amount,
-                    'payment_date': date.today(),
+                    'amount': float(payment_amount),
+                    'payment_date': date.today().isoformat(),
                     'method': 'cash',
                     'reference_no': f'Marked as paid via API'
                 }

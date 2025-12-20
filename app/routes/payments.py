@@ -95,7 +95,19 @@ def record_payment(invoice_id):
             # Send email notification
             customer = Customer.find_by_id(invoice.customer_id)
             if customer:
-                email_service.send_payment_received_email(new_payment.to_dict(), invoice, customer)
+                # Refresh invoice to get latest status/amounts if needed, or just use to_dict which handles types
+                # We need to ensure amount_paid and due_amount are present for the email
+                # Since find_by_id might not have them, we might want to calculate them or rely on to_dict defaults
+                # For now, let's use to_dict() to fix the type error
+                invoice_dict = invoice.to_dict()
+
+                # Manually calculate paid/due if missing (since find_by_id might not include aggregates)
+                if 'amount_paid' not in invoice_dict or invoice_dict['amount_paid'] == 0:
+                     paid_amount = Payment.get_total_paid(invoice_id)
+                     invoice_dict['amount_paid'] = float(paid_amount)
+                     invoice_dict['due_amount'] = invoice_dict['total_amount'] - invoice_dict['amount_paid']
+
+                email_service.send_payment_received_email(new_payment.to_dict(), invoice_dict, customer)
 
             return success_response(payment_schema.dump(new_payment), message="Payment recorded successfully.", status=201)
         return error_response(error_code='server_error', message="Failed to record payment.", status=500)

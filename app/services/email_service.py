@@ -107,12 +107,14 @@ class EmailService:
             return
 
         # Check if user has enabled payment_received notifications
+        # Check if user has enabled payment_received notifications
         user_id = invoice.user_id if hasattr(invoice, 'user_id') else invoice.get('user_id')
         if not EmailService.should_send_notification(user_id, 'payment_received'):
             print(f"Payment received notification disabled for user {user_id}")
             return
 
-        subject = f"Payment Received for Invoice #{invoice.invoice_number}"
+        invoice_number = invoice.invoice_number if hasattr(invoice, 'invoice_number') else invoice.get('invoice_number')
+        subject = f"Payment Received for Invoice #{invoice_number}"
         sender = EmailService.get_sender_for_invoice(invoice)
 
         EmailService.send_email(
