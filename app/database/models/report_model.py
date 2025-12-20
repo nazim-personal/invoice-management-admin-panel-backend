@@ -54,10 +54,15 @@ class ReportModel:
                 DATE_FORMAT(i.created_at, '{date_format}') as period,
                 COUNT(i.id) as invoice_count,
                 SUM(i.total_amount) as total_sales,
-                COALESCE(SUM(p.amount), 0) as total_collected,
-                (SUM(i.total_amount) - COALESCE(SUM(p.amount), 0)) as total_due
+                COALESCE(SUM(p_agg.total_paid), 0) as total_collected,
+                (SUM(i.total_amount) - COALESCE(SUM(p_agg.total_paid), 0)) as total_due
             FROM invoices i
-            LEFT JOIN payments p ON i.id = p.invoice_id
+            LEFT JOIN (
+                SELECT invoice_id, SUM(amount) as total_paid
+                FROM payments
+                WHERE deleted_at IS NULL
+                GROUP BY invoice_id
+            ) p_agg ON i.id = p_agg.invoice_id
             {where_sql.replace('invoice_date', 'i.created_at').replace('deleted_at', 'i.deleted_at')}
             GROUP BY period
             ORDER BY period DESC
@@ -113,11 +118,16 @@ class ReportModel:
                 c.id, c.name, c.email, c.phone,
                 COUNT(i.id) as total_invoices,
                 SUM(i.total_amount) as total_billed,
-                COALESCE(SUM(p.amount), 0) as total_paid,
-                (SUM(i.total_amount) - COALESCE(SUM(p.amount), 0)) as current_due
+                COALESCE(SUM(p_agg.total_paid), 0) as total_paid,
+                (SUM(i.total_amount) - COALESCE(SUM(p_agg.total_paid), 0)) as current_due
             FROM customers c
             JOIN invoices i ON c.id = i.customer_id
-            LEFT JOIN payments p ON i.id = p.invoice_id
+            LEFT JOIN (
+                SELECT invoice_id, SUM(amount) as total_paid
+                FROM payments
+                WHERE deleted_at IS NULL
+                GROUP BY invoice_id
+            ) p_agg ON i.id = p_agg.invoice_id
             WHERE i.deleted_at IS NULL AND c.deleted_at IS NULL
             GROUP BY c.id, c.name, c.email, c.phone
             HAVING current_due > 0
@@ -177,9 +187,14 @@ class ReportModel:
         financials_query = """
             SELECT
                 SUM(i.total_amount) as total_sales,
-                COALESCE(SUM(p.amount), 0) as total_collected
+                COALESCE(SUM(p_agg.total_paid), 0) as total_collected
             FROM invoices i
-            LEFT JOIN payments p ON i.id = p.invoice_id
+            LEFT JOIN (
+                SELECT invoice_id, SUM(amount) as total_paid
+                FROM payments
+                WHERE deleted_at IS NULL
+                GROUP BY invoice_id
+            ) p_agg ON i.id = p_agg.invoice_id
             WHERE i.deleted_at IS NULL
         """
         financials = DBManager.execute_query(financials_query, fetch='one')
