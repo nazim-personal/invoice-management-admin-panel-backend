@@ -13,6 +13,24 @@ def init_db():
     print("🔧 Initializing database...")
 
     try:
+        # Step 0: Create database if not exists
+        from app.database.config import Config
+        from app.database.base import get_db_connection
+
+        db_config = Config.get_db_config(db_required=True)
+        db_name = db_config.get('database')
+
+        if db_name:
+            print(f"🔍 Checking if database '{db_name}' exists...")
+            # Connect without selecting a DB
+            conn = get_db_connection(db_required=False)
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name}")
+                    print(f"✅ Database '{db_name}' verified/created")
+            finally:
+                conn.close()
+
         # Step 1: Create tables from schema (CREATE TABLE IF NOT EXISTS)
         schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'schemas', 'schema.sql')
 
@@ -30,8 +48,12 @@ def init_db():
 
         for line in schema_lines:
             if line.strip().upper().startswith('DROP TABLE'):
-                skip_until_semicolon = True
+                if ';' in line:
+                    skip_until_semicolon = False
+                else:
+                    skip_until_semicolon = True
                 continue
+
             if skip_until_semicolon:
                 if ';' in line:
                     skip_until_semicolon = False
