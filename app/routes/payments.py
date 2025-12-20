@@ -3,8 +3,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from app.database.models.invoice import Invoice
+from app.database.models.customer import Customer
 from app.database.models.payment import Payment
 from app.database.models.activity_model import ActivityLog
+from app.services.email_service import email_service
 from app.schemas.payment_schema import PaymentSchema, PaymentDetailSchema
 from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
@@ -89,6 +91,12 @@ def record_payment(invoice_id):
             )
 
             new_payment = Payment.find_by_id(payment_id)
+
+            # Send email notification
+            customer = Customer.find_by_id(invoice.customer_id)
+            if customer:
+                email_service.send_payment_received_email(new_payment.to_dict(), invoice, customer)
+
             return success_response(payment_schema.dump(new_payment), message="Payment recorded successfully.", status=201)
         return error_response(error_code='server_error', message="Failed to record payment.", status=500)
     except Exception as e:

@@ -1,0 +1,38 @@
+{% extends "email/base.html" %}
+
+{% block title %}Invoice Overdue Reminder{% endblock %}
+
+{% block content %}
+<p>Dear {{ customer.name }},</p>
+
+<p style="color: #d9534f; font-weight: bold;">This is a reminder that your invoice is now overdue.</p>
+
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Invoice Number:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ invoice.invoice_number }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Due Date:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; color: #d9534f;">{{ invoice.due_date }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Amount:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ invoice.total_amount }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Amount Due:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">{{ invoice.due_amount }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Days Overdue:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; color: #d9534f;">{{ days_overdue }}</td>
+    </tr>
+</table>
+
+<p>Please arrange payment at your earliest convenience to avoid any late fees or service interruptions.</p>
+
+<p>If you have already made the payment, please disregard this notice.</p>
+
+<p>Thank you for your prompt attention to this matter.</p>
+{% endblock %}

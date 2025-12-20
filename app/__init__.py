@@ -3,6 +3,7 @@ import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_mail import Mail
 from app.database.db_manager import DBManager
 from app.database.models.user import User
 from app.utils.error_messages import ERROR_MESSAGES
@@ -24,6 +25,10 @@ from .routes.permissions import permissions_blueprint
 from .routes.activities import activities_bp
 from .routes.reports import reports_bp
 from .routes.webhooks import webhooks_bp
+from .routes.scheduler import scheduler_blueprint
+from .routes.notification_settings import notification_settings_blueprint
+
+mail = Mail()
 
 def create_app():
     app = Flask(__name__)
@@ -45,6 +50,20 @@ def create_app():
     # --- Configuration ---
     app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', '773a46049339ef55babc522b64fcc25e3524fb737aa0c2da8a7ee105202a7486')
     app.config["SECRET_KEY"] = os.environ.get('SECRET_KEY', '13c8e9205aa641f5e83b3ad1738047a839ee5df3416c60d502bd4bfa0a657796')
+
+    # --- Mail Configuration ---
+    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
+    app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+
+    mail.init_app(app)
+
+    # --- Scheduler Configuration ---
+    from app.services.scheduler_service import scheduler_service
+    scheduler_service.init_app(app)
 
     # JWT Token Configuration
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=int(os.environ.get('JWT_ACCESS_TOKEN_HOURS', '1')))
@@ -102,6 +121,8 @@ def create_app():
     app.register_blueprint(activities_bp, url_prefix='/api')
     app.register_blueprint(reports_bp, url_prefix='/api')
     app.register_blueprint(webhooks_bp, url_prefix='/api')
+    app.register_blueprint(scheduler_blueprint, url_prefix='/api')
+    app.register_blueprint(notification_settings_blueprint, url_prefix='/api')
 
     # A simple health check route
     @app.route("/api/health")

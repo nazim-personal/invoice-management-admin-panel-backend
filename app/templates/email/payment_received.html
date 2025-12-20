@@ -1,0 +1,104 @@
+{% extends "email/base.html" %}
+
+{% block title %}Payment Received{% endblock %}
+
+{% block content %}
+<p>Dear {{ customer.name }},</p>
+
+{% if invoice.status == 'Paid' %}
+<p style="color: #28a745; font-weight: bold;">✓ Thank you! Your payment has been received and your invoice is now fully
+    paid.</p>
+{% else %}
+<p>Thank thank you! We have received your payment for invoice <strong>#{{ invoice.invoice_number }}</strong>.</p>
+{% endif %}
+
+<h3 style="margin-top: 30px; margin-bottom: 10px; color: #333;">Payment Details</h3>
+<table
+    style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f8f9fa; border: 1px solid #ddd;">
+    <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>Payment Amount:</strong></td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; color: #28a745; font-size: 1.1em;"><strong>₹{{
+                "%.2f"|format(payment.amount) }}</strong></td>
+    </tr>
+    <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>Payment Date:</strong></td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ payment.payment_date }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>Payment Method:</strong></td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-transform: capitalize;">{{ payment.method }}</td>
+    </tr>
+    {% if payment.reference_no %}
+    <tr>
+        <td style="padding: 12px;"><strong>Reference Number:</strong></td>
+        <td style="padding: 12px;">{{ payment.reference_no }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+<h3 style="margin-top: 30px; margin-bottom: 10px; color: #333;">Invoice Summary</h3>
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Invoice Number:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ invoice.invoice_number }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Invoice Date:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ invoice.created_at }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Due Date:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ invoice.due_date }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Invoice Total:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹{{ "%.2f"|format(invoice.total_amount) }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Paid:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; color: #28a745;">₹{{ "%.2f"|format(invoice.amount_paid)
+            }}</td>
+    </tr>
+    <tr style="background-color: #f8f9fa;">
+        <td style="padding: 12px; font-size: 1.1em;"><strong>Remaining Balance:</strong></td>
+        <td
+            style="padding: 12px; font-size: 1.1em; {% if invoice.due_amount > 0 %}color: #dc3545;{% else %}color: #28a745;{% endif %}">
+            <strong>₹{{ "%.2f"|format(invoice.due_amount) }}</strong>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 8px;"><strong>Status:</strong></td>
+        <td style="padding: 8px;">
+            <span style="
+                background-color: {% if invoice.status == 'Paid' %}#28a745{% elif invoice.status == 'Partially Paid' %}#ffc107{% else %}#dc3545{% endif %};
+                color: {% if invoice.status == 'Paid' %}white{% else %}#333{% endif %};
+                padding: 4px 12px;
+                border-radius: 3px;
+                font-size: 0.9em;
+            ">{{ invoice.status }}</span>
+        </td>
+    </tr>
+</table>
+
+{% if invoice.status == 'Paid' %}
+<div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin: 20px 0;">
+    <p style="margin: 0; color: #155724;">
+        <strong>✓ Invoice Fully Paid</strong><br>
+        This invoice has been paid in full. Thank you for your prompt payment!
+    </p>
+</div>
+{% elif invoice.due_amount > 0 %}
+<div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+    <p style="margin: 0; color: #856404;">
+        <strong>Partial Payment Received</strong><br>
+        A remaining balance of <strong>₹{{ "%.2f"|format(invoice.due_amount) }}</strong> is due by {{ invoice.due_date
+        }}.
+    </p>
+</div>
+{% endif %}
+
+<p style="margin-top: 30px;">If you have any questions about this payment or invoice, please don't hesitate to contact
+    us.</p>
+
+<p>Thank you for your business!</p>
+{% endblock %}

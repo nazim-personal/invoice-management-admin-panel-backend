@@ -4,8 +4,10 @@ from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity
 from app.services.phonepe_service import phonepe_service
 from app.database.models.invoice import Invoice
+from app.database.models.customer import Customer
 from app.database.models.payment import Payment
 from app.database.models.activity_model import ActivityLog
+from app.services.email_service import email_service
 from app.utils.response import success_response, error_response
 from app.utils.utils import update_invoice_status
 from decimal import Decimal
@@ -130,6 +132,12 @@ def phonepe_webhook():
                     },
                     ip_address=request.remote_addr
                 )
+
+                # Send email notification
+                customer = Customer.find_by_id(invoice.customer_id)
+                new_payment = Payment.find_by_id(payment_id)
+                if customer and new_payment:
+                    email_service.send_payment_received_email(new_payment.to_dict(), invoice, customer)
 
                 return success_response(
                     result={

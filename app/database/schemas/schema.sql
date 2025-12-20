@@ -5,7 +5,8 @@
 -- It creates all the necessary tables, columns, relationships, and indexes.
 -- ==================================================================
 
--- Drop existing tables in reverse order of creation to handle foreign keys
+-- Drop existing tables (in reverse dependency order)
+DROP TABLE IF EXISTS notification_settings;
 DROP TABLE IF EXISTS token_blacklist;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS invoice_items;
@@ -243,4 +244,27 @@ CREATE TABLE IF NOT EXISTS token_blacklist (
   -- Indexes for faster queries
   INDEX idx_token_blacklist_token (token),
   INDEX idx_token_blacklist_deleted_at (deleted_at)
+);
+
+-- ------------------------------------------------------------------
+-- Table: notification_settings
+-- Purpose: Stores user preferences for email notifications.
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notification_settings (
+  id CHAR(36) PRIMARY KEY,               -- UUID for unique settings identification
+  user_id CHAR(36) NOT NULL,             -- Foreign key linking to the user
+  invoice_created BOOLEAN DEFAULT TRUE,  -- Enable/disable invoice creation emails
+  payment_received BOOLEAN DEFAULT TRUE, -- Enable/disable payment receipt emails
+  invoice_overdue BOOLEAN DEFAULT TRUE,  -- Enable/disable overdue reminder emails
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp of settings creation
+  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+  -- Foreign key constraint
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Ensure one settings record per user
+  UNIQUE KEY unique_user_settings (user_id),
+
+  -- Indexes for faster queries
+  INDEX idx_notification_settings_user_id (user_id)
 );

@@ -26,6 +26,7 @@ class Invoice(BaseModel):
         return {
             "id": self.id,
             "invoice_number": self.invoice_number,
+            "user_id": getattr(self, "user_id", None),
             "created_at": self.created_at.isoformat() if getattr(self, 'created_at', None) else None,
             "due_date": self.due_date.isoformat() if getattr(self, 'due_date', None) else None,
             "subtotal_amount": float(self.subtotal_amount),
@@ -144,5 +145,33 @@ class Invoice(BaseModel):
         total = count_result['total'] if count_result else 0
 
         return invoices, total
+
+    @classmethod
+    def find_overdue_invoices(cls):
+        """
+        Find all invoices that are overdue (due_date < today and status != 'Paid')
+        Returns list of invoice objects with customer details
+        """
+        query = """
+            SELECT i.*,
+                   c.id AS customer_id,
+                   c.name AS customer_name,
+                   c.email AS customer_email,
+                   c.phone AS customer_phone,
+                   COALESCE(SUM(p.amount), 0) AS amount_paid,
+                   (i.total_amount - COALESCE(SUM(p.amount), 0)) AS due_amount,
+                   DATEDIFF(CURDATE(), i.due_date) AS days_overdue
+            FROM invoices i
+            JOIN customers c ON i.customer_id = c.id
+            LEFT JOIN payments p ON i.id = p.invoice_id
+            WHERE i.due_date < CURDATE()
+              AND i.status != 'Paid'
+              AND i.deleted_at IS NULL
+            GROUP BY i.id, c.id, c.name, c.email, c.phone
+            HAVING due_amount > 0
+            ORDER BY days_overdue DESC
+        """
+        rows = DBManager.execute_query(query, fetch='all')
+        return [cls.from_row(row) for row in rows] if rows else []
 
 

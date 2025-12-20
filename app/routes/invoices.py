@@ -21,6 +21,7 @@ from app.utils.utils import calculate_invoice_totals, generate_invoice_number, u
 from app.utils.pdf_generator import InvoicePDFGenerator
 from app.utils.helpers import validate_request, get_or_404, bulk_action_handler
 from app.database.models.activity_model import ActivityLog
+from app.services.email_service import email_service
 
 
 invoices_blueprint = Blueprint('invoices', __name__)
@@ -183,9 +184,37 @@ def create_invoice():
             ip_address=request.remote_addr
         )
 
+        # Send email notification (don't fail invoice creation if email fails)
+        try:
+            # Fetch invoice items for email
+            invoice_dict = created_invoice.to_dict()
+            invoice_items = InvoiceItem.find_by_invoice_id(invoice_id)
+
+            # Format items for email template
+            formatted_items = []
+            for item in invoice_items:
+                item_dict = item.to_dict()
+                # Flatten product details for easier template access
+                formatted_items.append({
+                    'product_name': item_dict.get('product', {}).get('name', 'Product'),
+                    'quantity': item_dict['quantity'],
+                    'price': item_dict['price'],
+                    'total': item_dict['total']
+                })
+
+            invoice_dict['invoice_items'] = formatted_items
+
+            email_service.send_invoice_created_email(invoice_dict, customer)
+        except Exception as email_error:
+            print(f"Warning: Failed to send invoice creation email: {email_error}")
+            import traceback
+            traceback.print_exc()
+
         return success_response(result=created_invoice.to_dict(), status=201)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return error_response('server_error', 'Error creating invoice.', str(e), 500)
 
 
@@ -285,6 +314,15 @@ def update_invoice(invoice_id: str):
                     details={'amount': float(payment_amount), 'method': 'cash'},
                     ip_address=request.remote_addr
                 )
+
+                # Send email notification
+                payment_data = {
+                    'amount': payment_amount,
+                    'payment_date': date.today(),
+                    'method': 'cash',
+                    'reference_no': f'Marked as paid via API'
+                }
+                email_service.send_payment_received_email(payment_data, invoice, customer)
 
         # --- Log activity before modifying validated dict ---
         # Prepare activity details
