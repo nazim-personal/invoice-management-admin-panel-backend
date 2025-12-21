@@ -54,6 +54,29 @@
 </table>
 {% endif %}
 
+</table>
+
+{% if invoice.initial_payment %}
+<h3 style="margin-top: 30px; margin-bottom: 10px; color: #333;">Payment Received</h3>
+<table
+    style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f8f9fa; border: 1px solid #ddd;">
+    <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>Amount Paid:</strong></td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; color: #28a745;"><strong>₹{{
+                "%.2f"|format(invoice.initial_payment.amount) }}</strong></td>
+    </tr>
+    <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>Payment Date:</strong></td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ invoice.initial_payment.date }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>Payment Method:</strong></td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-transform: capitalize;">{{
+            invoice.initial_payment.method }}</td>
+    </tr>
+</table>
+{% endif %}
+
 <h3 style="margin-top: 30px; margin-bottom: 10px; color: #333;">Summary</h3>
 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
     <tr>
@@ -73,11 +96,30 @@
         <td style="padding: 8px; text-align: right;">₹{{ "%.2f"|format(invoice.tax_amount) }}</td>
     </tr>
     {% endif %}
+    <tr>
+        <td style="padding: 12px; text-align: right; font-size: 1.1em;"><strong>Total Amount:</strong></td>
+        <td style="padding: 12px; text-align: right; font-size: 1.1em;">₹{{ "%.2f"|format(invoice.total_amount) }}</td>
+    </tr>
+    {% if invoice.initial_payment %}
+    <tr>
+        <td style="padding: 8px; text-align: right; color: #28a745;"><strong>Amount Paid:</strong></td>
+        <td style="padding: 8px; text-align: right; color: #28a745;">- ₹{{ "%.2f"|format(invoice.initial_payment.amount)
+            }}</td>
+    </tr>
     <tr style="border-top: 2px solid #333;">
-        <td style="padding: 12px; text-align: right; font-size: 1.2em;"><strong>Total Amount:</strong></td>
+        <td style="padding: 12px; text-align: right; font-size: 1.2em;"><strong>Balance Due:</strong></td>
+        <td
+            style="padding: 12px; text-align: right; font-size: 1.2em; color: {% if invoice.due_amount > 0 %}#dc3545{% else %}#28a745{% endif %};">
+            <strong>₹{{ "%.2f"|format(invoice.due_amount) }}</strong>
+        </td>
+    </tr>
+    {% else %}
+    <tr style="border-top: 2px solid #333;">
+        <td style="padding: 12px; text-align: right; font-size: 1.2em;"><strong>Total Due:</strong></td>
         <td style="padding: 12px; text-align: right; font-size: 1.2em; color: #007bff;"><strong>₹{{
                 "%.2f"|format(invoice.total_amount) }}</strong></td>
     </tr>
+    {% endif %}
 </table>
 
 <p style="margin-top: 30px;">Please review the invoice details and make the payment by <strong>{{ invoice.due_date

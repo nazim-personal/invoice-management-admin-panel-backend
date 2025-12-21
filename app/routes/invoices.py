@@ -204,6 +204,17 @@ def create_invoice():
 
             invoice_dict['invoice_items'] = formatted_items
 
+            # Add initial payment details if available
+            if initial_payment:
+                invoice_dict['initial_payment'] = {
+                    'amount': float(initial_payment['amount']),
+                    'method': initial_payment['method'],
+                    'date': date.today().isoformat()
+                }
+                # Update amount paid and due amount for the email
+                invoice_dict['amount_paid'] = float(initial_payment['amount'])
+                invoice_dict['due_amount'] = invoice_dict['total_amount'] - invoice_dict['amount_paid']
+
             email_service.send_invoice_created_email(invoice_dict, customer)
         except Exception as email_error:
             print(f"Warning: Failed to send invoice creation email: {email_error}")
@@ -322,7 +333,16 @@ def update_invoice(invoice_id: str):
                     'method': 'cash',
                     'reference_no': f'Marked as paid via API'
                 }
-                email_service.send_payment_received_email(payment_data, invoice, customer)
+
+                invoice_dict = invoice.to_dict()
+                invoice_dict['amount_paid'] = float(paid_amount + payment_amount)
+                invoice_dict['due_amount'] = 0.0 # Since we are paying the full remaining balance
+                invoice_dict['status'] = 'Paid'
+
+                # Fetch customer for email
+                customer = Customer.find_by_id(invoice.customer_id)
+                if customer:
+                    email_service.send_payment_received_email(payment_data, invoice_dict, customer)
 
         # --- Log activity before modifying validated dict ---
         # Prepare activity details
