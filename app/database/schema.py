@@ -43,8 +43,13 @@ def create_schema():
             amount DECIMAL(10, 2) NOT NULL,
             payment_method VARCHAR(255) NOT NULL,
             status VARCHAR(255) NOT NULL,
+            transaction_id VARCHAR(255) DEFAULT NULL,
+            payment_gateway VARCHAR(50) DEFAULT NULL,
+            gateway_response TEXT DEFAULT NULL,
             FOREIGN KEY (invoice_id) REFERENCES invoices(id)
         );
+        CREATE INDEX IF NOT EXISTS idx_payments_transaction_id ON payments(transaction_id);
+        CREATE INDEX IF NOT EXISTS idx_payments_gateway ON payments(payment_gateway);
         """)
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
