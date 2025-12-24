@@ -11,6 +11,8 @@ services:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 5s
       retries: 10
+    networks:
+      - invoice-network
 
   backend:
     build: .
@@ -26,3 +28,9 @@ services:
       PORT: 5001
     ports:
       - "5001:5001"
+    networks:
+      - invoice-network
+
+networks:
+  invoice-network:
+    driver: bridge
