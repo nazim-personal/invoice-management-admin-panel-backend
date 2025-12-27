@@ -5,12 +5,15 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: invoice_db
+      MYSQL_USER: invoice-mysql-user
+      MYSQL_PASSWORD: 6g-[)5Lcs7r]bBMO
     ports:
       - "3306:3306"
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
       interval: 5s
-      retries: 10
+      timeout: 5s
+      retries: 20
     networks:
       - invoice-network
 
@@ -25,6 +28,9 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
+      DB_USER: invoice-mysql-user
+      DB_PASSWORD: 6g-[)5Lcs7r]bBMO
+      DB_NAME: invoice_db
       PORT: 5001
     ports:
       - "5001:5001"
