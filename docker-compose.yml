@@ -3,7 +3,6 @@ services:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: invoice_db
       MYSQL_USER: invoice-mysql-user
       MYSQL_PASSWORD: 6g-[)5Lcs7r]bBMO
@@ -26,7 +25,7 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: mysql
+      DB_HOST: 35.238.134.199
       DB_PORT: 3306
       DB_USER: invoice-mysql-user
       DB_PASSWORD: 6g-[)5Lcs7r]bBMO
