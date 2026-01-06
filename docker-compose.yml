@@ -1,14 +1,16 @@
+version: "3.9"
+
 services:
   mysql:
     image: mysql:8.0
     container_name: mysql-db
+    env_file:
+      - .env
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: invoice-management
-      MYSQL_USER: invoice-mysql-user
-      MYSQL_PASSWORD: 6g-[)5Lcs7r]bBMO
-    ports:
-      - "3306:3306"
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
       interval: 5s
@@ -25,15 +27,8 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    environment:
-      DB_HOST: 35.238.134.199
-      DB_PORT: 3306
-      DB_USER: invoice-mysql-user
-      DB_PASSWORD: 6g-[)5Lcs7r]bBMO
-      DB_NAME: invoice-management
-      PORT: 5001
     ports:
-      - "5001:5001"
+      - "${PORT}:${PORT}"
     networks:
       - invoice-network
 
