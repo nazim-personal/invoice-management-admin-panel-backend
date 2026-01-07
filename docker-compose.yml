@@ -1,37 +1,10 @@
 version: "3.9"
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-db
-    env_file:
-      - .env
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks:
-      - invoice-network
-
   backend:
     build: .
     container_name: invoice-backend
-    depends_on:
-      mysql:
-        condition: service_healthy
     env_file:
       - .env
     ports:
-      - "${PORT}:${PORT}"
-    networks:
-      - invoice-network
-
-networks:
-  invoice-network:
-    driver: bridge
+      - "5001:5001"
