@@ -9,19 +9,21 @@ load_dotenv()
 class Config:
     """
     Database configuration class.
-    
+
     This class encapsulates the settings required to connect to the database,
     loading all values from environment variables. It provides a single,
     authoritative source for database connection parameters.
     """
-    
+
     # A dictionary of connection arguments for pymysql
     MYSQL_CONFIG = {
-        "host": os.getenv("DB_HOST", "localhost"),
-        "user": os.getenv("DB_USER", "root"),
-        "password": os.getenv("DB_PASSWORD", "root"),
-        "database": os.getenv("DB_NAME", "vyaper_billing_db"),
-        "cursorclass": pymysql.cursors.DictCursor
+       "host": os.getenv("DB_HOST"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
+        "database": os.getenv("DB_NAME"),
+        "port": int(os.getenv("DB_PORT", 3306)),  # 🔑 TiDB Cloud uses 4000
+        "cursorclass": pymysql.cursors.DictCursor,
+        "ssl": {"ssl": {}}
     }
 
     @staticmethod
@@ -34,5 +36,5 @@ class Config:
         config = Config.MYSQL_CONFIG.copy()
         if not db_required:
             # Remove the database key for connections to the server itself
-            config.pop('database', None) 
+            config.pop('database', None)
         return config
