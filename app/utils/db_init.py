@@ -90,6 +90,9 @@ def init_db():
             admin_email = os.getenv('ADMIN_EMAIL', 'admin@example.com')
             admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
 
+            from app.utils.permissions import PERMISSIONS
+            all_permissions = list(PERMISSIONS.keys())
+
             admin_data = {
                 'username': admin_username,
                 'email': admin_email,
@@ -102,7 +105,8 @@ def init_db():
                 'company_phone': os.getenv('COMPANY_PHONE', '+91 1234567890'),
                 'company_email': os.getenv('COMPANY_EMAIL', 'info@company.com'),
                 'company_gst': os.getenv('COMPANY_GST', '12ABCDE1234F1Z5'),
-                'currency_symbol': os.getenv('CURRENCY_SYMBOL', '₹')
+                'currency_symbol': os.getenv('CURRENCY_SYMBOL', '₹'),
+                'permissions': all_permissions
             }
 
             User.create(admin_data)

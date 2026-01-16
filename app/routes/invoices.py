@@ -447,6 +447,15 @@ def bulk_delete_invoices():
     if not ids_to_delete or not isinstance(ids_to_delete, list):
         return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
 
+    # Check if any invoices are not fully paid
+    unpaid_invoices = Invoice.get_unpaid_invoices(ids_to_delete)
+    if unpaid_invoices:
+        return error_response(
+            error_code='validation_error',
+            message=f"Cannot delete invoices {', '.join(unpaid_invoices)} because they are not fully paid.",
+            status=400
+        )
+
     result = bulk_action_handler(ids_to_delete, Invoice.bulk_soft_delete, "{count} invoice(s) soft-deleted successfully.", "No matching invoices found for the provided IDs.")
 
     # Log activity

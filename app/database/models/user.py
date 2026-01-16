@@ -6,7 +6,7 @@ from app.database.db_manager import DBManager
 class User(BaseModel):
     _table_name = 'users'
 
-    def __init__(self, id, username, email, password_hash, role='staff', name=None, phone=None, billing_address=None, billing_city=None, billing_state=None, billing_pin=None, billing_gst=None, company_name=None, company_address=None, company_city=None, company_phone=None, company_email=None, company_gst=None, currency_symbol='₹', **kwargs):
+    def __init__(self, id, username, email, password_hash, role='staff', name=None, phone=None, billing_address=None, billing_city=None, billing_state=None, billing_pin=None, billing_gst=None, company_name=None, company_address=None, company_city=None, company_phone=None, company_email=None, company_gst=None, currency_symbol='₹', permissions=None, **kwargs):
         self.id = id
         self.username = username
         self.email = email
@@ -26,6 +26,7 @@ class User(BaseModel):
         self.company_email = company_email
         self.company_gst = company_gst
         self.currency_symbol = currency_symbol
+        self.permissions = permissions
         # Absorb any extra columns that might be in the database row
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -56,7 +57,8 @@ class User(BaseModel):
             'company_phone': self.company_phone,
             'company_email': self.company_email,
             'company_gst': self.company_gst,
-            'currency_symbol': self.currency_symbol
+            'currency_symbol': self.currency_symbol,
+            'permissions': self.get_permissions()
         }
 
     @classmethod
@@ -85,16 +87,23 @@ class User(BaseModel):
         company_email = data.get('company_email')
         company_gst = data.get('company_gst')
         currency_symbol = data.get('currency_symbol', '₹')
+        permissions = data.get('permissions')
+        if not permissions:
+            from app.utils.permissions import DEFAULT_ROLE_PERMISSIONS
+            permissions = DEFAULT_ROLE_PERMISSIONS.get(role, [])
+
+        import json
+        permissions_json = json.dumps(permissions) if permissions else None
 
         query = f'''
             INSERT INTO {cls._table_name}
             (id, username, email, password_hash, name, role, phone,
-             company_name, company_address, company_city, company_phone, company_email, company_gst, currency_symbol)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             company_name, company_address, company_city, company_phone, company_email, company_gst, currency_symbol, permissions)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         '''
         DBManager.execute_write_query(query, (
             user_id, username, email, hashed_password, name, role, phone,
-            company_name, company_address, company_city, company_phone, company_email, company_gst, currency_symbol
+            company_name, company_address, company_city, company_phone, company_email, company_gst, currency_symbol, permissions_json
         ))
 
         # Return the ID directly. The route will be responsible for fetching.
@@ -127,6 +136,16 @@ class User(BaseModel):
             from app.utils.permissions import PERMISSIONS
             return list(PERMISSIONS.keys())
 
+        if self.permissions:
+            import json
+            if isinstance(self.permissions, str):
+                try:
+                    return json.loads(self.permissions)
+                except Exception:
+                    return []
+            elif isinstance(self.permissions, list):
+                return self.permissions
+
         from app.database.models.permission_model import UserPermission
         return UserPermission.get_user_permissions(str(self.id))
 
@@ -134,3 +153,48 @@ class User(BaseModel):
         """Check if user has a specific permission"""
         return permission in self.get_permissions()
 
+    @classmethod
+    def has_created_entities(cls, user_id: str) -> bool:
+        """
+        Check if the user has created any invoices, customers, or products.
+        Customers and products are checked via activity logs.
+        """
+        # Check invoices (direct link)
+        invoice_query = "SELECT COUNT(*) as count FROM invoices WHERE user_id = %s"
+        invoice_result = DBManager.execute_query(invoice_query, (user_id,), fetch='one')
+        if invoice_result and invoice_result['count'] > 0:
+            return True
+
+        # Check activity logs for customer/product creation
+        activity_query = """
+            SELECT COUNT(*) as count FROM activity_logs
+            WHERE user_id = %s AND action IN ('CUSTOMER_CREATED', 'PRODUCT_CREATED')
+        """
+        activity_result = DBManager.execute_query(activity_query, (user_id,), fetch='one')
+        if activity_result and activity_result['count'] > 0:
+            return True
+
+        return False
+
+    @classmethod
+    def get_users_with_entities(cls, ids: List[str]) -> List[str]:
+        """
+        Check which users from the given list have created any invoices, customers, or products.
+        Returns a list of usernames for users who cannot be deleted.
+        """
+        if not ids:
+            return []
+
+        placeholders = ", ".join(["%s"] * len(ids))
+
+        # Check invoices and activity logs
+        query = f"""
+            SELECT DISTINCT u.username
+            FROM {cls._table_name} u
+            LEFT JOIN invoices i ON u.id = i.user_id
+            LEFT JOIN activity_logs al ON u.id = al.user_id AND al.action IN ('CUSTOMER_CREATED', 'PRODUCT_CREATED')
+            WHERE u.id IN ({placeholders}) AND u.deleted_at IS NULL
+            AND (i.id IS NOT NULL OR al.id IS NOT NULL)
+        """
+        rows = DBManager.execute_query(query, tuple(ids), fetch='all')
+        return [row['username'] for row in rows] if rows else []

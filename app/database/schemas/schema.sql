@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS users (
   company_email VARCHAR(255),               -- Company Email for PDF
   company_gst VARCHAR(50),                  -- Company GST for PDF
   currency_symbol VARCHAR(10) DEFAULT '₹',  -- Currency Symbol for PDF
+  permissions JSON DEFAULT NULL,            -- User's specific permissions
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp of user creation
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP NULL DEFAULT NULL,   -- Timestamp of soft deletion

@@ -139,6 +139,10 @@ def register():
     if missing_fields:
         return error_response(error_code='validation_error', message=f"Missing required fields: {', '.join(missing_fields)}", status=400)
 
+    # Allow role in registration (admin only action)
+    if 'role' in data and data['role'] not in ['admin', 'staff', 'manager']:
+        return error_response(error_code='validation_error', message="Invalid role provided.", status=400)
+
     if User.find_by_email(data['email']):
         return error_response(error_code='conflict', message=ERROR_MESSAGES["conflict"]["user_exists"], status=409)
 
@@ -154,7 +158,8 @@ def register():
                 'name': new_user.name,
                 'role': new_user.role,
                 'company_name': new_user.company_name,
-                'company_email': new_user.company_email
+                'company_email': new_user.company_email,
+                'permissions': new_user.get_permissions()
             }
             return success_response(user_data, message="User registered successfully.", status=201)
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["create_user"], status=500)

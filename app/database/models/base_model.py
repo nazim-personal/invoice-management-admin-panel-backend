@@ -140,6 +140,10 @@ class BaseModel:
         return total
 
     @classmethod
+    def soft_delete(cls, record_id: str) -> bool:
+        return cls.bulk_soft_delete([record_id]) > 0
+
+    @classmethod
     def bulk_soft_delete(cls, ids: List[str]) -> int:
         return cls._bulk_update(ids, {"deleted_at": datetime.now(timezone.utc)}, condition_deleted=True)
 

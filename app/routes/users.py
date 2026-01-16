@@ -1,3 +1,4 @@
+from typing import List
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
@@ -9,7 +10,7 @@ from app.utils.response import success_response, error_response
 from app.utils.error_messages import ERROR_MESSAGES
 from app.utils.auth import require_admin, require_permission
 from app.utils.pagination import get_pagination
-from app.utils.helpers import validate_request, get_or_404
+from app.utils.helpers import validate_request, get_or_404, bulk_action_handler
 from app.schemas.user_schema import UserUpdateSchema, ProfileUpdateSchema, PasswordChangeSchema, BillingInfoSchema
 
 users_blueprint = Blueprint('users', __name__)
@@ -64,6 +65,17 @@ def update_user_profile(user_id):
             return error_response(error_code='unauthorized', message="Invalid old password.", status=401)
         validated_data['password_hash'] = generate_password_hash(validated_data.pop('password'), method='scrypt')
         validated_data.pop('old_password', None)
+
+    # Restrict role and permissions updates to admins
+    if 'role' in validated_data or 'permissions' in validated_data:
+        if not user.is_admin:
+            validated_data.pop('role', None)
+            validated_data.pop('permissions', None)
+        else:
+            # If admin is updating permissions, serialize to JSON
+            if 'permissions' in validated_data:
+                import json
+                validated_data['permissions'] = json.dumps(validated_data['permissions'])
 
     try:
         if not User.update(user_id, validated_data):
@@ -290,7 +302,7 @@ def get_all_users():
     except Exception as e:
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_user"], details=str(e), status=500)
 
-@users_blueprint.route('/users/<int:user_id>', methods=['GET'])
+@users_blueprint.route('/users/<string:user_id>', methods=['GET'])
 @jwt_required()
 def get_user(user_id):
     current_user_id = get_jwt_identity()
@@ -309,11 +321,88 @@ def get_user(user_id):
     except Exception as e:
         return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["fetch_user"], details=str(e), status=500)
 
+@users_blueprint.route('/users', methods=['POST'])
+@jwt_required()
+@require_permission('users.create')
+def create_user():
+    """Create a new user (Admin only)."""
+    data = request.get_json()
+    if not data:
+        return error_response(error_code='validation_error', message=ERROR_MESSAGES["validation"]["request_body_empty"], status=400)
+
+    required_fields = ['username', 'email', 'password', 'name', 'company_name', 'company_address', 'company_city', 'company_phone', 'company_email', 'company_gst']
+    missing_fields = [field for field in required_fields if field not in data]
+    if missing_fields:
+        return error_response(error_code='validation_error', message=f"Missing required fields: {', '.join(missing_fields)}", status=400)
+
+    if User.find_by_email(data['email']):
+        return error_response(error_code='conflict', message=ERROR_MESSAGES["conflict"]["user_exists"], status=409)
+
+    try:
+        user_id = User.create(data)
+        if user_id:
+            new_user = User.find_by_id(user_id)
+            # Log activity
+            ActivityLog.create_log(
+                user_id=get_jwt_identity(),
+                action='USER_CREATED',
+                entity_type='user',
+                entity_id=user_id,
+                details={'username': new_user.username, 'email': new_user.email, 'role': new_user.role},
+                ip_address=request.remote_addr
+            )
+            return success_response(new_user.to_dict(), message="User created successfully.", status=201)
+        return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["create_user"], status=500)
+    except Exception as e:
+        return error_response(error_code='server_error', message=ERROR_MESSAGES["server_error"]["create_user"], details=str(e), status=500)
+
+@users_blueprint.route('/users/bulk-delete', methods=['POST'])
+@jwt_required()
+@require_permission('users.delete')
+def bulk_delete_users():
+    data = request.get_json() or {}
+    ids_to_delete: List[str] = data.get('ids', [])
+
+    if not ids_to_delete or not isinstance(ids_to_delete, list):
+        return error_response('validation_error', "Invalid request. 'ids' must be a list.", 400)
+
+    # Check if any users have created entities
+    users_with_entities = User.get_users_with_entities(ids_to_delete)
+    if users_with_entities:
+        return error_response(
+            error_code='validation_error',
+            message=f"Cannot delete users {', '.join(users_with_entities)} because they have created customers, products, or invoices.",
+            status=400
+        )
+
+    result = bulk_action_handler(ids_to_delete, User.bulk_soft_delete, "{count} user(s) soft-deleted successfully.", "No matching users found for the provided IDs.")
+
+    # Log activity
+    if result[1] == 200:  # Success
+        ActivityLog.create_log(
+            user_id=get_jwt_identity(),
+            action='USERS_BULK_DELETED',
+            entity_type='user',
+            entity_id=None,
+            details={'user_ids': ids_to_delete, 'count': len(ids_to_delete)},
+            ip_address=request.remote_addr
+        )
+
+    return result
+
 @users_blueprint.route('/users/<string:user_id>', methods=['DELETE'])
 @jwt_required()
 @require_permission('users.delete')
 def delete_user(user_id: str):
     try:
+        # Check if user has created any entities (invoices, customers, products)
+        if User.has_created_entities(user_id):
+            return error_response(
+                error_code='validation_error',
+                message="Cannot delete user because they have created customers, products, or invoices.",
+                status=400
+            )
+
         if not User.soft_delete(user_id):
             return error_response(error_code='not_found', message=ERROR_MESSAGES["not_found"]["user"], status=404)
 

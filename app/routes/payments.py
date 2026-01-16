@@ -22,6 +22,7 @@ payment_schema = PaymentSchema()
 
 @payments_blueprint.route('/payments/search/', methods=['GET'])
 @jwt_required()
+@require_permission('payments.list')
 def search_payments():
     """Search payments with multiple filters."""
     search_term = request.args.get('q')

@@ -12,6 +12,8 @@ class UserUpdateSchema(Schema):
     billing_state = fields.Str()
     billing_pin = fields.Str()
     billing_gst = fields.Str()
+    role = fields.Str(validate=validate.OneOf(['admin', 'staff', 'manager']))
+    permissions = fields.List(fields.Str())
 
 
 class ProfileUpdateSchema(Schema):

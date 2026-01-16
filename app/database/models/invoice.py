@@ -175,3 +175,23 @@ class Invoice(BaseModel):
         return [cls.from_row(row) for row in rows] if rows else []
 
 
+    @classmethod
+    def get_unpaid_invoices(cls, ids: List[str]) -> List[str]:
+        """
+        Check which invoices from the given list are not fully paid.
+        Returns a list of invoice numbers for unpaid invoices.
+        """
+        if not ids:
+            return []
+
+        placeholders = ", ".join(["%s"] * len(ids))
+        query = f"""
+            SELECT i.invoice_number
+            FROM {cls._table_name} i
+            LEFT JOIN payments p ON i.id = p.invoice_id
+            WHERE i.id IN ({placeholders}) AND i.deleted_at IS NULL
+            GROUP BY i.id, i.invoice_number, i.total_amount
+            HAVING (i.total_amount - COALESCE(SUM(p.amount), 0)) > 0
+        """
+        rows = DBManager.execute_query(query, tuple(ids), fetch='all')
+        return [row['invoice_number'] for row in rows] if rows else []

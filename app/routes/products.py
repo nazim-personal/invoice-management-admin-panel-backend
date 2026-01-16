@@ -26,6 +26,7 @@ product_update_schema = ProductSchema(partial=True)
 
 @products_blueprint.route('/products/search', methods=['GET'])
 @jwt_required()
+@require_permission('products.list')
 def search_products():
     search_term = request.args.get('q')
     if not search_term:

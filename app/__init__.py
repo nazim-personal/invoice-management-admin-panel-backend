@@ -68,7 +68,11 @@ def create_app():
     # JWT Token Configuration
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=int(os.environ.get('JWT_ACCESS_TOKEN_HOURS', '1')))
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=int(os.environ.get('JWT_REFRESH_TOKEN_DAYS', '30')))
-    app.config["JWT_TOKEN_LOCATION"] = ["headers"]  # Support Authorization header
+    app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]  # Support both headers and cookies
+    app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
+    app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # Disable CSRF for simple cookie-based auth
+    app.config["JWT_COOKIE_SECURE"] = False  # Allow cookies over HTTP for local dev
+    app.config["JWT_COOKIE_SAMESITE"] = None # Allow cookies in cross-site requests if needed
 
     jwt = JWTManager(app)
 

@@ -44,6 +44,28 @@ PERMISSIONS = {
 
     # Report permissions
     'reports.view': 'View system reports',
+
+    # Activity permissions
+    'activities.view_all': 'View all system activities',
+}
+
+# Default permissions for each role
+DEFAULT_ROLE_PERMISSIONS = {
+    'admin': list(PERMISSIONS.keys()),
+    'manager': [
+        'dashboard.view',
+        'customers.list', 'customers.view', 'customers.create', 'customers.update', 'customers.delete', 'customers.restore',
+        'products.list', 'products.view', 'products.create', 'products.update', 'products.delete', 'products.restore',
+        'invoices.list', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.delete', 'invoices.restore',
+        'payments.list', 'payments.view', 'payments.create',
+        'reports.view',
+        'activities.view_all'
+    ],
+    'staff': [
+        'dashboard.view',
+        'customers.list', 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
+        'products.list', 'products.view', 'products.create', 'products.update', 'products.delete'
+    ]
 }
 
 # Permission categories for UI grouping
